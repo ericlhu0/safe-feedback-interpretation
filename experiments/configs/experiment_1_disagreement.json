@@ -3,7 +3,7 @@
   "description": "Test how model uncertainty changes when speech and facial expressions disagree",
   "base_config": {
     "input_context": {
-      "current_action_description": "You are repositioning the user's wrist during a therapy session.",
+      "current_action_description": "you are repositioning the user's arm during a therapy session.",
       "current_state": {
         "contact_forces": {
           "entire_arm": 2,
@@ -13143,111 +13143,6 @@
         }
       },
       "disagreement_type": "agreement_no_discomfort"
-    },
-    {
-      "name": "smiling1",
-      "received_feedback": {
-        "verbal_feedback": {
-          "description": "ow that's too tight on my wrist"
-        },
-        "facial_expression": {
-          "modality": "image",
-          "description": "experiments/assets/faceimgs/smile/smile1.jpg"
-        }
-      },
-      "labels": {
-        "entire_arm": {
-          "1": 0.05,
-          "2": 0.15,
-          "3": 0.7,
-          "4": 0.1
-        },
-        "upper_arm": {
-          "2": 0.1,
-          "3": 0.8,
-          "4": 0.1
-        },
-        "forearm": {
-          "1": 0.05,
-          "2": 0.15,
-          "3": 0.7,
-          "4": 0.1
-        },
-        "wrist": {
-          "1": 0.2,
-          "2": 0.6,
-          "3": 0.2
-        },
-        "joint_range_min": {
-          "elbow": {
-            "0": 0.6,
-            "15": 0.3,
-            "30": 0.1
-          },
-          "wrist": {
-            "0": 0.6,
-            "15": 0.3,
-            "30": 0.1
-          }
-        },
-        "joint_range_max": {
-          "elbow": {
-            "135": 0.1,
-            "150": 0.3,
-            "165": 0.6
-          },
-          "wrist": {
-            "135": 0.1,
-            "150": 0.3,
-            "165": 0.6
-          }
-        }
-      },
-      "model_outputs": {
-        "single_token_probabilities": {
-          "3": 0.9999989719621736,
-          "Based": 5.043471815847051e-07,
-          "4": 4.4508482557577276e-07,
-          "2": 1.2501504819116561e-09,
-          "Given": 6.691573328117371e-10,
-          "The": 1.6918946955790182e-10,
-          "Considering": 1.3176489137912955e-10,
-          "Despite": 1.0261860058738471e-10,
-          "Three": 3.3315381877555444e-11,
-          "Due": 1.7832438895436006e-11
-        },
-        "full_output_distributions": {
-          "entire_arm": {
-            "1": 0.05,
-            "2": 0.15,
-            "3": 0.7,
-            "4": 0.1,
-            "5": 0.0
-          },
-          "upper_arm": {
-            "1": 0.0,
-            "2": 0.1,
-            "3": 0.8,
-            "4": 0.1,
-            "5": 0.0
-          },
-          "forearm": {
-            "1": 0.05,
-            "2": 0.15,
-            "3": 0.7,
-            "4": 0.1,
-            "5": 0.0
-          },
-          "wrist": {
-            "1": 0.2,
-            "2": 0.6,
-            "3": 0.2,
-            "4": 0.0,
-            "5": 0.0
-          }
-        },
-        "full_output_text": "3"
-      }
     }
   ]
 }

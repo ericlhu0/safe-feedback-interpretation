@@ -1,0 +1,3 @@
+ask model to not update values unsupported by evidence
+explain what the probability distribution means
+main experiment

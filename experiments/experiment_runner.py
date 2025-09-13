@@ -497,7 +497,11 @@ def main(use_text_descriptions: bool = False, run_single_token: bool = True):
     for i, config_file in enumerate(experiments, 1):
         try:
             experiment_results = run_experiment(
-                config_file, model, incremental_file, use_text_descriptions, run_single_token
+                config_file,
+                model,
+                incremental_file,
+                use_text_descriptions,
+                run_single_token,
             )
             experiment_name = f"experiment_{i}"
             all_results[experiment_name] = experiment_results
@@ -586,4 +590,7 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    main(use_text_descriptions=args.use_text_descriptions, run_single_token=not args.full_only)
+    main(
+        use_text_descriptions=args.use_text_descriptions,
+        run_single_token=not args.full_only,
+    )

@@ -1,0 +1,1 @@
+don't tell model in prompt that it's grabbing user by wrista

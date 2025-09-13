@@ -1,4 +1,0 @@
-runtime:
-  # Toggle to replace images with text descriptions when building inputs
-  use_text_descriptions: false
-

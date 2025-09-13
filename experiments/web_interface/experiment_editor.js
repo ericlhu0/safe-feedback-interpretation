@@ -2,21 +2,57 @@
 
 class ExperimentEditor {
     constructor() {
-        this.currentExperimentConfig = null;
-        this.currentScenario = {};
-        this.facialExpressionImages = {};
-        this.verbalFeedbackOptions = {};
+        this.currentDataset = {
+            experiment_name: "Conformal Feedback Interpretation Experiment",
+            description: "Test how model uncertainty changes with different feedback intensities and modalities",
+            base_config: {
+                // This will be populated when loading or creating scenarios
+                input_context: {
+                    current_action_description: "you are repositioning the user's arm during a therapy session.",
+                    current_state: {
+                        contact_forces: {
+                            entire_arm: 2,
+                            upper_arm: 1,
+                            forearm: 1,
+                            wrist: 2
+                        },
+                        joint_angles_deg: {
+                            elbow: 135,
+                            wrist: 135
+                        }
+                    },
+                    current_comfort_threshold: {
+                        current_comfort_threshold: {
+                            entire_arm: { "2": 0.1, "3": 0.8, "4": 0.1 },
+                            upper_arm: { "2": 0.1, "3": 0.8, "4": 0.1 },
+                            forearm: { "2": 0.1, "3": 0.8, "4": 0.1 },
+                            wrist: { "2": 0.1, "3": 0.8, "4": 0.1 }
+                        },
+                        current_comfortable_joint_range_deg: {
+                            min: {
+                                elbow: { "0": 0.6, "15": 0.3, "30": 0.1 },
+                                wrist: { "0": 0.6, "15": 0.3, "30": 0.1 }
+                            },
+                            max: {
+                                elbow: { "135": 0.1, "150": 0.3, "165": 0.6 },
+                                wrist: { "135": 0.1, "150": 0.3, "165": 0.6 }
+                            }
+                        }
+                    }
+                }
+            },
+            scenarios: []
+        };
         this.initializeAsync();
     }
 
     async initializeAsync() {
-        await this.loadVerbalFeedbackOptions();
         this.initializeEventListeners();
+        this.initializeDefaultValues();
     }
 
     initializeEventListeners() {
-        // Experiment selection
-        document.getElementById('experiment-select').addEventListener('change', this.onExperimentSelect.bind(this));
+        // Config upload  
         document.getElementById('config-upload').addEventListener('change', this.onConfigUpload.bind(this));
 
         // Probability sliders
@@ -29,6 +65,14 @@ class ExperimentEditor {
         // Normalize buttons
         document.querySelectorAll('.normalize-btn').forEach(btn => {
             btn.addEventListener('click', this.normalizeDistribution.bind(this));
+        });
+
+        // Auto-populate scenario name based on metadata
+        ['verbal-intensity', 'facial-intensity', 'source-specificity'].forEach(id => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('change', this.updateScenarioName.bind(this));
+            }
         });
     }
 
@@ -44,6 +88,17 @@ class ExperimentEditor {
             slider.addEventListener('input', this.updateSliderValue.bind(this));
             slider.addEventListener('change', this.updateSumDisplay.bind(this));
         });
+    }
+
+    updateScenarioName() {
+        const verbalIntensity = document.getElementById('verbal-intensity').value;
+        const facialIntensity = document.getElementById('facial-intensity').value;
+        const sourceSpecificity = document.getElementById('source-specificity').value;
+        
+        if (verbalIntensity && facialIntensity && sourceSpecificity) {
+            const scenarioName = `${verbalIntensity}_${facialIntensity}_${sourceSpecificity}`;
+            document.getElementById('scenario-name').value = scenarioName;
+        }
     }
 
     async onExperimentSelect(event) {
@@ -94,10 +149,38 @@ class ExperimentEditor {
         if (file && file.type === 'application/json') {
             try {
                 const text = await file.text();
-                this.currentExperimentConfig = JSON.parse(text);
-                this.showStatus('Config file loaded successfully!', 'success');
-                document.getElementById('scenario-form').style.display = 'block';
-                this.populateFormFromConfig();
+                const loadedData = JSON.parse(text);
+                
+                // Handle new clean format
+                if (loadedData.base_config && loadedData.scenarios) {
+                    this.currentDataset = {
+                        experiment_name: loadedData.experiment_name || "Loaded Experiment",
+                        description: loadedData.description || "Loaded from file",
+                        base_config: loadedData.base_config,
+                        scenarios: loadedData.scenarios || []
+                    };
+                    
+                    this.showStatus(`Loaded ${this.currentDataset.scenarios.length} scenarios successfully!`, 'success');
+                    document.getElementById('scenario-form').style.display = 'block';
+                    document.getElementById('download-btn').style.display = 'inline-block';
+                    
+                    // Show loaded scenarios
+                    this.displayLoadedScenarios();
+                    
+                    // Update preview
+                    const previewEl = document.getElementById('json-preview');
+                    if (previewEl) {
+                        previewEl.textContent = JSON.stringify(this.currentDataset, null, 2);
+                    }
+                    
+                } else {
+                    // Handle old format for backwards compatibility
+                    this.currentExperimentConfig = loadedData;
+                    this.showStatus('Config file loaded successfully!', 'success');
+                    document.getElementById('scenario-form').style.display = 'block';
+                    this.populateFormFromConfig();
+                }
+                
             } catch (error) {
                 this.showStatus('Error loading config file: ' + error.message, 'error');
             }
@@ -342,7 +425,7 @@ class ExperimentEditor {
         // Fallback default config if no experiment is loaded
         return {
             input_context: {
-                current_action_description: "You are repositioning the user's wrist during a therapy session.",
+                current_action_description: "you are repositioning the user's arm during a therapy session.",
                 current_state: {
                     contact_forces: {"entire_arm": 2, "upper_arm": 1, "forearm": 1, "wrist": 2},
                     joint_angles_deg: {"elbow": 165, "wrist": 165}
@@ -451,38 +534,19 @@ class ExperimentEditor {
     collectFormData() {
         const scenarioName = document.getElementById('scenario-name').value;
         const scenarioDescription = document.getElementById('scenario-description').value;
-        const independentVariable = document.getElementById('independent-variable').value;
         
-        // Received feedback - check if using dropdowns or text inputs
-        const experimentSelect = document.getElementById('experiment-select');
-        const experimentType = experimentSelect.value;
-        let verbalFeedback, facialModality, facialDescription;
-        
-        if (experimentType === 'experiment_1_disagreement') {
-            // For experiment 1, return single template - actual combinations will be generated later
-            const verbalCategory = document.getElementById('verbal-feedback-dropdown').value;
-            const facialCategory = document.getElementById('facial-expression-dropdown').value;
-            
-            // Store the categories for later use in generateAllScenarios
-            verbalFeedback = `${verbalCategory}_category`;
-            facialDescription = `${facialCategory}_category`;
-            facialModality = 'image'; // Always image for experiment 1 dropdowns
-        } else {
-            // Use text input values for other experiments
-            verbalFeedback = document.getElementById('verbal-feedback').value;
-            facialModality = document.getElementById('facial-modality').value;
-            facialDescription = document.getElementById('facial-description').value;
-        }
+        // Collect experiment metadata
+        const experimentMetadata = {
+            verbal_intensity: document.getElementById('verbal-intensity').value,
+            facial_intensity: document.getElementById('facial-intensity').value,
+            source_specificity: document.getElementById('source-specificity').value
+        };
         
         // Expert labels - body parts
         const bodyParts = ['entire_arm', 'upper_arm', 'forearm', 'wrist'];
         const labels = {};
         
-        // Only include ask_clarification if it's true
-        const askClarification = document.getElementById('ask-clarification').checked;
-        if (askClarification) {
-            labels.ask_clarification = true;
-        }
+        // Removed ask_clarification logic
         
         // Collect body part distributions (filter out zeros)
         bodyParts.forEach(part => {
@@ -531,25 +595,15 @@ class ExperimentEditor {
             labels[`joint_range_${rangeType}`] = rangeData;
         });
         
-        // Determine independent variable field name based on experiment type
-        const variableFieldName = this.getIndependentVariableFieldName(experimentType);
+        // Removed unused independent variable logic
         
         const scenarioData = {
             description: scenarioDescription || undefined,
-            received_feedback: {
-                verbal_feedback: { description: verbalFeedback },
-                facial_expression: { 
-                    modality: facialModality, 
-                    description: facialDescription 
-                }
-            },
+            experiment_metadata: experimentMetadata,
             labels
         };
         
-        // Add independent variable if specified
-        if (independentVariable && variableFieldName) {
-            scenarioData[variableFieldName] = independentVariable;
-        }
+        // Remove unused independent variable logic
         
         return {
             scenarioName,
@@ -665,8 +719,6 @@ class ExperimentEditor {
     addScenario() {
         try {
             const formData = this.collectFormData();
-            const experimentSelect = document.getElementById('experiment-select');
-            const experimentType = experimentSelect.value;
             
             if (!formData.scenarioName.trim()) {
                 this.showStatus('Please enter a scenario name.', 'error');
@@ -680,35 +732,22 @@ class ExperimentEditor {
                 return;
             }
             
-            // Add scenario to current config
-            if (!this.currentExperimentConfig.scenarios) {
-                this.currentExperimentConfig.scenarios = [];
-            }
-            
-            if (experimentType === 'experiment_1_disagreement') {
-                // Generate all combinations for experiment 1
-                const scenarios = this.generateAllScenarios(formData);
-                this.currentExperimentConfig.scenarios.push(...scenarios);
-                this.showStatus(`Added ${scenarios.length} scenarios for all combinations`, 'success');
-            } else {
-                // Add single scenario for other experiments
-                const scenarioWithName = { 
-                    name: formData.scenarioName, 
-                    ...formData.scenarioData 
-                };
-                this.currentExperimentConfig.scenarios.push(scenarioWithName);
-                this.showStatus('Scenario added successfully', 'success');
-            }
+            // Add scenario to unified dataset
+            const scenarioWithName = { 
+                name: formData.scenarioName, 
+                ...formData.scenarioData 
+            };
+            this.currentDataset.scenarios.push(scenarioWithName);
             
             // Show download button
             document.getElementById('download-btn').style.display = 'inline-block';
             
             this.showStatus(`Scenario "${formData.scenarioName}" added successfully!`, 'success');
             
-            // Update JSON preview only when a new scenario is saved
+            // Update JSON preview
             const previewEl = document.getElementById('json-preview');
             if (previewEl) {
-                previewEl.textContent = JSON.stringify(this.currentExperimentConfig, null, 2);
+                previewEl.textContent = JSON.stringify(this.currentDataset, null, 2);
             }
             
             // Clear only text inputs for next scenario; keep sliders unchanged
@@ -720,18 +759,16 @@ class ExperimentEditor {
     }
 
     downloadConfig() {
-        if (!this.currentExperimentConfig) {
-            this.showStatus('No configuration to download.', 'error');
+        if (!this.currentDataset || this.currentDataset.scenarios.length === 0) {
+            this.showStatus('No scenarios to download.', 'error');
             return;
         }
         
-        const configJSON = JSON.stringify(this.currentExperimentConfig, null, 2);
-        const blob = new Blob([configJSON], { type: 'application/json' });
+        const datasetJSON = JSON.stringify(this.currentDataset, null, 2);
+        const blob = new Blob([datasetJSON], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         
-        const experimentSelect = document.getElementById('experiment-select');
-        const experimentType = experimentSelect.value || 'custom_experiment';
-        const filename = `${experimentType}_updated.json`;
+        const filename = 'unified_scenario_dataset.json';
         
         const a = document.createElement('a');
         a.href = url;
@@ -759,10 +796,6 @@ class ExperimentEditor {
     clearTextInputs() {
         document.getElementById('scenario-name').value = '';
         document.getElementById('scenario-description').value = '';
-        document.getElementById('verbal-feedback').value = '';
-        document.getElementById('facial-description').value = '';
-        document.getElementById('ask-clarification').checked = false;
-        document.getElementById('independent-variable').value = '';
     }
 
     clearForm() {
@@ -774,7 +807,6 @@ class ExperimentEditor {
         document.getElementById('independent-variable').value = '';
         
         // Reset checkbox
-        document.getElementById('ask-clarification').checked = false;
         
         // Reset all sliders to 0
         document.querySelectorAll('.prob-slider, .angle-slider').forEach(slider => {
@@ -803,7 +835,6 @@ class ExperimentEditor {
         document.getElementById('independent-variable').value = '';
         
         // Reset checkbox
-        document.getElementById('ask-clarification').checked = false;
         
         // Reset all sliders to 0 (they will be populated by config)
         document.querySelectorAll('.prob-slider, .angle-slider').forEach(slider => {
@@ -844,6 +875,52 @@ class ExperimentEditor {
         }
         
         this.showStatus('Form initialized with base configuration values', 'info');
+    }
+
+    initializeDefaultValues() {
+        // Wait a bit for DOM to be fully ready
+        setTimeout(() => {
+            if (this.currentDataset.base_config) {
+                const baseConfig = this.currentDataset.base_config;
+                
+                // Initialize comfort thresholds from base config
+                const comfortThresholds = baseConfig.input_context?.current_comfort_threshold?.current_comfort_threshold;
+                if (comfortThresholds) {
+                    this.populateComfortThresholds(comfortThresholds);
+                }
+                
+                // Initialize joint ranges from base config  
+                const jointRanges = baseConfig.input_context?.current_comfort_threshold?.current_comfortable_joint_range_deg;
+                if (jointRanges) {
+                    this.populateJointRanges(jointRanges);
+                }
+                
+                console.log('Initialized form with default base config values');
+                
+                // Show the scenario form since we have base config
+                document.getElementById('scenario-form').style.display = 'block';
+            }
+        }, 500); // Give time for DOM to load
+    }
+
+    displayLoadedScenarios() {
+        const infoDiv = document.getElementById('loaded-scenarios-info');
+        const listDiv = document.getElementById('loaded-scenarios-list');
+        
+        if (this.currentDataset.scenarios.length > 0) {
+            listDiv.innerHTML = this.currentDataset.scenarios.map(scenario => {
+                const metadata = scenario.experiment_metadata;
+                return `<div class="loaded-scenario">
+                    <strong>${scenario.name}</strong> - 
+                    Verbal: ${metadata.verbal_intensity}, 
+                    Facial: ${metadata.facial_intensity}, 
+                    Specificity: ${metadata.source_specificity}
+                </div>`;
+            }).join('');
+            infoDiv.style.display = 'block';
+        } else {
+            infoDiv.style.display = 'none';
+        }
     }
 
     populateComfortThresholds(comfortThresholds) {
@@ -986,6 +1063,13 @@ class ProbabilityDistributionHelpers {
 document.addEventListener('DOMContentLoaded', () => {
     window.experimentEditor = new ExperimentEditor();
     window.probHelpers = ProbabilityDistributionHelpers;
+    
+    // Update scenario name after DOM is fully loaded
+    setTimeout(() => {
+        if (window.experimentEditor && window.experimentEditor.updateScenarioName) {
+            window.experimentEditor.updateScenarioName();
+        }
+    }, 100);
 });
 
 // Add quick-fill buttons for common distributions
@@ -1053,4 +1137,5 @@ document.addEventListener('DOMContentLoaded', () => {
             normalizeBtn.parentNode.insertBefore(buttonsDiv, normalizeBtn);
         });
     }, 100);
+
 });

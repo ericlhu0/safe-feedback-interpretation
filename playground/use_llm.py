@@ -1,9 +1,10 @@
 """Use LLM."""
 
-from itertools import product
 import json
 import textwrap
+from itertools import product
 from typing import Any, Dict
+
 import numpy as np
 
 from safe_feedback_interpretation.models.openai_model import OpenAIModel
@@ -40,15 +41,20 @@ def get_full_output(
 
 
 def get_comfort_level_distribution(
-    model_name: str, system_prompt: str, text_content: str, body_part: str, image_path: str
+    model_name: str,
+    system_prompt: str,
+    text_content: str,
+    body_part: str,
+    image_path: str,
 ) -> Dict[int, float]:
-    """Get comfort level distribution for a body part using full output approach."""
-    
+    """Get comfort level distribution for a body part using full output
+    approach."""
+
     llm_model = OpenAIModel(
         model=model_name,
         system_prompt=system_prompt,
     )
-    
+
     prompt = (
         "\n\nWhat is the updated comfort threshold level (1-5 scale) for the "
         f"{body_part}? Answer in JSON format with probability distribution over "
@@ -56,26 +62,26 @@ def get_comfort_level_distribution(
         "3, 4, 5. Do not use any formatting, enclose key names in quotes, do not "
         "nest dictionaries and do not use any other keys."
     )
-    
+
     try:
         full_output_text = llm_model.get_full_output(text_content + prompt, image_path)
-        
+
         if not full_output_text or full_output_text.strip() == "":
             print(f"ERROR: Model returned empty response for {body_part}")
             return {1: 0.2, 2: 0.2, 3: 0.2, 4: 0.2, 5: 0.2}
-        
+
         try:
             full_output_dict = json.loads(full_output_text)
         except json.JSONDecodeError as json_err:
             print(f"ERROR: Invalid JSON response for {body_part}: {json_err}")
             print(f"Raw output: {full_output_text}")
             return {1: 0.2, 2: 0.2, 3: 0.2, 4: 0.2, 5: 0.2}
-        
+
         # Normalize to ensure we have all levels 1-5
         normalized_probs = {}
         for level in range(1, 6):
             normalized_probs[level] = 0.0
-        
+
         # Update with actual probabilities from model output
         for key, prob in full_output_dict.items():
             try:
@@ -84,37 +90,43 @@ def get_comfort_level_distribution(
                     normalized_probs[level_key] = float(prob)
             except (ValueError, TypeError):
                 continue
-        
+
         return normalized_probs
-        
+
     except Exception as e:
         print(f"ERROR: Failed to get comfort level distribution for {body_part}: {e}")
         return {1: 0.2, 2: 0.2, 3: 0.2, 4: 0.2, 5: 0.2}
 
 
 def get_single_token_distribution(
-    model_name: str, system_prompt: str, text_content: str, body_part: str, image_path: str
+    model_name: str,
+    system_prompt: str,
+    text_content: str,
+    body_part: str,
+    image_path: str,
 ) -> Dict[int, float]:
     """Get single token distribution for a body part."""
-    
+
     llm_model = OpenAIModel(
         model=model_name,
         system_prompt=system_prompt,
     )
-    
+
     prompt = (
         f"\n\nWhat is the updated comfort threshold (1-5 scale) for the {body_part}? "
         f"Answer with only a single threshold value."
     )
-    
+
     try:
-        single_token_result = llm_model.get_single_token_logits(text_content + prompt, image_path)
-        
+        single_token_result = llm_model.get_single_token_logits(
+            text_content + prompt, image_path
+        )
+
         # Extract probabilities for digits 1-5
         comfort_probs = {}
         for level in range(1, 6):
             comfort_probs[level] = 0.0
-        
+
         for token, prob in single_token_result.items():
             try:
                 token_str = str(token).strip()
@@ -122,9 +134,9 @@ def get_single_token_distribution(
                     comfort_probs[int(token_str)] = float(prob)
             except (ValueError, TypeError):
                 continue
-        
+
         return comfort_probs
-        
+
     except Exception as e:
         print(f"ERROR: Failed to get single token distribution for {body_part}: {e}")
         return {1: 0.2, 2: 0.2, 3: 0.2, 4: 0.2, 5: 0.2}
@@ -144,16 +156,18 @@ def calculate_max_prob(probs: Dict[int, float]) -> float:
     return max(probs.values()) if probs else 0.0
 
 
-def calculate_brier_score(pred_probs: Dict[int, float], true_probs: Dict[int, float]) -> float:
+def calculate_brier_score(
+    pred_probs: Dict[int, float], true_probs: Dict[int, float]
+) -> float:
     """Calculate Brier score between two probability distributions."""
     all_keys = set(pred_probs.keys()) | set(true_probs.keys())
-    
+
     brier_score = 0.0
     for key in all_keys:
         pred_prob = pred_probs.get(key, 0.0)
         true_prob = true_probs.get(key, 0.0)
         brier_score += (pred_prob - true_prob) ** 2
-    
+
     return brier_score
 
 
@@ -227,19 +241,20 @@ if __name__ == "__main__":
         "you're grabbing my wrist way too tight",
         "my wrist feels like it's being crushed",
         "way too much pressure on my wrist",
-        "you're digging hard into my wrist"
+        "you're digging hard into my wrist",
     ]
     image_inputs = [
         "experiments/assets/faceimgs/smile/smile1.jpg",
         "experiments/assets/faceimgs/smile/smile2.jpg",
         "experiments/assets/faceimgs/smile/smile3.jpg",
         "experiments/assets/faceimgs/smile/smile4.jpg",
-        "experiments/assets/faceimgs/smile/smile5.jpg"
+        "experiments/assets/faceimgs/smile/smile5.jpg",
     ]
 
     prompt_context = lambda text_input: textwrap.dedent(
-        ("""\
-        Current action description: You are repositioning the user's wrist during
+        (
+            """\
+        Current action description: You are repositioning the user's arm during
         a therapy session.
         Current state:
           Contact forces: {{
@@ -302,7 +317,7 @@ if __name__ == "__main__":
           }
         }}
         """
-        f"""
+            f"""
         Received feedback:
           Verbal feedback: {text_input}
           Facial expression: Please examine the provided facial expression image to
@@ -325,9 +340,8 @@ if __name__ == "__main__":
     )
 
     image_input = "experiments/assets/faceimgs/smile/smile1.jpg"
-    
+
     body_parts = ["entire_arm", "upper_arm", "forearm", "wrist"]
-    
 
     # Define expected labels (ground truth)
     expected_labels = {
@@ -337,12 +351,12 @@ if __name__ == "__main__":
         "wrist": {"1": 0.2, "2": 0.8},
         "joint_range_min": {
             "elbow": {"0": 0.6, "15": 0.3, "30": 0.1},
-            "wrist": {"0": 0.6, "15": 0.3, "30": 0.1}
+            "wrist": {"0": 0.6, "15": 0.3, "30": 0.1},
         },
         "joint_range_max": {
             "elbow": {"135": 0.1, "150": 0.3, "165": 0.6},
-            "wrist": {"135": 0.1, "150": 0.3, "165": 0.6}
-        }
+            "wrist": {"135": 0.1, "150": 0.3, "165": 0.6},
+        },
     }
 
     # Collect all results
@@ -351,7 +365,7 @@ if __name__ == "__main__":
     for i, (text_input, image_input) in enumerate(product(text_inputs, image_inputs)):
         scenario_name = f"smile_{i+1}"
         print(f"\nProcessing scenario: {scenario_name}")
-        
+
         # Get single token distributions for each body part
         predictions_single = {}
         for body_part in body_parts:
@@ -379,12 +393,14 @@ if __name__ == "__main__":
         brier_scores_full = {}
         brier_scores_single = {}
         brier_scores_comparison = {}
-        
+
         for body_part in body_parts:
             if body_part in expected_labels:
                 # Convert string keys to int for calculation
-                label_dict = {int(k): float(v) for k, v in expected_labels[body_part].items()}
-                
+                label_dict = {
+                    int(k): float(v) for k, v in expected_labels[body_part].items()
+                }
+
                 brier_scores_full[body_part] = calculate_brier_score(
                     predictions_full[body_part], label_dict
                 )
@@ -398,17 +414,19 @@ if __name__ == "__main__":
         # Calculate metrics for wrist (primary analysis)
         wrist_single = predictions_single.get("wrist", {})
         wrist_full = predictions_full.get("wrist", {})
-        
+
         single_token_entropy = calculate_entropy(wrist_single)
         single_token_max_prob = calculate_max_prob(wrist_single)
-        
+
         full_output_entropy = calculate_entropy(wrist_full)
         full_output_max_prob = calculate_max_prob(wrist_full)
 
         # Overall Brier scores
         overall_brier_scores = {}
         if "wrist" in expected_labels:
-            wrist_labels = {int(k): float(v) for k, v in expected_labels["wrist"].items()}
+            wrist_labels = {
+                int(k): float(v) for k, v in expected_labels["wrist"].items()
+            }
             overall_brier_scores["single_token_vs_labels"] = calculate_brier_score(
                 wrist_single, wrist_labels
             )
@@ -445,19 +463,22 @@ if __name__ == "__main__":
             },
             "brier_scores": overall_brier_scores,
             "comparisons": {
-                "brier_single_vs_full": calculate_brier_score(wrist_full, wrist_single)
-                if (wrist_full and wrist_single) else 0.0
+                "brier_single_vs_full": (
+                    calculate_brier_score(wrist_full, wrist_single)
+                    if (wrist_full and wrist_single)
+                    else 0.0
+                )
             },
             "expected": {
                 "labels": expected_labels,
-                "disagreement_type": "verbal_high_face_low_discomfort"
-            }
+                "disagreement_type": "verbal_high_face_low_discomfort",
+            },
         }
 
     # Save all results to file
     output_file = "playground/smile_experiment_results.json"
-    with open(output_file, 'w') as f:
+    with open(output_file, "w") as f:
         json.dump(all_results, f, indent=2)
-    
+
     print(f"\nResults saved to {output_file}")
     print(f"Generated {len(all_results)} scenarios")

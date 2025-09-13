@@ -1,5 +1,0 @@
-experiment:
-  name: q1_disagreement
-  # Reuse existing JSON config file from the non-Hydra pipeline
-  config_file: experiments/configs/experiment_1_disagreement.json
-

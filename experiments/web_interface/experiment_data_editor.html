@@ -14,28 +14,21 @@
         </header>
 
         <main>
-            <!-- Experiment Selection -->
+            <!-- Dataset Management -->
             <section class="section">
-                <h2>Select Experiment</h2>
+                <h2>Scenario Dataset</h2>
                 <div class="form-group">
-                    <label for="experiment-select">Choose experiment to add data to:</label>
-                    <select id="experiment-select" class="form-control">
-                        <option value="">-- Select Experiment --</option>
-                        <option value="experiment_1_disagreement">Q1: Speech vs Facial Expression Disagreement</option>
-                        <option value="experiment_2_ambiguity">Q2: Location Specificity Ambiguity</option>
-                        <option value="experiment_3_intensity">Q3: Adaptation to Discomfort Intensities</option>
-                        <option value="experiment_4_modality">Q4: Facial Expression Modality Comparison</option>
-                        <option value="experiment_5_uncertainty">Q5: Single-token vs Verbalized Uncertainty</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="config-upload">Or upload existing config file:</label>
+                    <label for="config-upload">Load existing dataset (optional):</label>
                     <input type="file" id="config-upload" accept=".json" class="form-control">
+                </div>
+                <div id="loaded-scenarios-info" style="display: none;" class="info-box">
+                    <h4>Loaded Scenarios</h4>
+                    <div id="loaded-scenarios-list"></div>
                 </div>
             </section>
 
             <!-- Scenario Creation Form -->
-            <section class="section" id="scenario-form" style="display: none;">
+            <section class="section" id="scenario-form">
                 <h2>Create New Scenario</h2>
                 
                 <!-- Scenario Metadata -->
@@ -50,80 +43,44 @@
                         <textarea id="scenario-description" class="form-control" rows="2" placeholder="Brief description of this scenario..."></textarea>
                     </div>
                     
-                    <!-- Independent Variable Category -->
-                    <div class="form-group" id="independent-variable-group" style="display: none;">
-                        <label for="independent-variable">Independent Variable Level:</label>
-                        <select id="independent-variable" class="form-control">
-                            <option value="">-- Select Level --</option>
-                            <option value="low">Low</option>
-                            <option value="mid">Mid</option>
-                            <option value="high">High</option>
-                        </select>
-                        <small class="help-text" id="independent-variable-help">Select the level of the independent variable for this scenario.</small>
+                </div>
+
+                <!-- Experiment Configuration Metadata -->
+                <div class="subsection">
+                    <h3>Experiment Configuration Metadata</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="verbal-intensity">Verbal Intensity:</label>
+                            <select id="verbal-intensity" class="form-control">
+                                <option value="high">High</option>
+                                <option value="mid">Mid</option>
+                                <option value="none">None</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="facial-intensity">Facial Intensity:</label>
+                            <select id="facial-intensity" class="form-control">
+                                <option value="high">High</option>
+                                <option value="mid">Mid</option>
+                                <option value="none">None</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="source-specificity">Source Specificity:</label>
+                            <select id="source-specificity" class="form-control">
+                                <option value="very">Very Specific</option>
+                                <option value="region">Regional</option>
+                                <option value="not">Not Specific</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Received Feedback -->
-                <div class="subsection">
-                    <h3>Received Feedback</h3>
-                    
-                    <!-- Text input version for experiments 2-5 -->
-                    <div id="feedback-text-inputs">
-                        <div class="form-group">
-                            <label for="verbal-feedback">Verbal Feedback:</label>
-                            <textarea id="verbal-feedback" class="form-control" rows="3" placeholder="Describe what the user says about their comfort/discomfort..."></textarea>
-                            <small class="help-text">Combine specificity and description in natural language</small>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="facial-modality">Facial Expression Modality:</label>
-                            <select id="facial-modality" class="form-control">
-                                <option value="text">Text Description</option>
-                                <option value="image">Image Path</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="facial-description">Facial Expression Description:</label>
-                            <textarea id="facial-description" class="form-control" rows="2" placeholder="Describe the facial expression or provide image path..."></textarea>
-                        </div>
-                    </div>
-                    
-                    <!-- Dropdown version for experiment 1 -->
-                    <div id="feedback-dropdown-inputs" style="display: none;">
-                        <div class="form-group">
-                            <label for="verbal-feedback-dropdown">Verbal Feedback:</label>
-                            <select id="verbal-feedback-dropdown" class="form-control">
-                                <option value="">-- Select Verbal Feedback Level --</option>
-                                <option value="high" data-category="high">High Discomfort</option>
-                                <option value="mid" data-category="mid">Mid Discomfort</option>
-                                <option value="low" data-category="low">No Discomfort</option>
-                            </select>
-                            <small class="help-text">Select discomfort level - all phrases in this category will be used to create multiple scenarios</small>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="facial-expression-dropdown">Facial Expression:</label>
-                            <select id="facial-expression-dropdown" class="form-control">
-                                <option value="">-- Select Facial Expression --</option>
-                                <!-- Options will be populated dynamically from asset directories -->
-                            </select>
-                            <small class="help-text">Select from facial expression categories - all images in the chosen category will be used to create multiple scenarios</small>
-                        </div>
-                    </div>
-                </div>
+                <!-- Received Feedback section removed - now generated dynamically from metadata -->
 
                 <!-- Expert Labels -->
                 <div class="subsection">
                     <h3>Expert Labels</h3>
-                    
-                    <!-- Ask Clarification -->
-                    <div class="form-group">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="ask-clarification">
-                            Should ask for clarification
-                        </label>
-                    </div>
 
                     <!-- Body Part Comfort Thresholds -->
                     <div class="form-group">

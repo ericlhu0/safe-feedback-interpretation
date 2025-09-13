@@ -1,5 +1,60 @@
-defaults:
-  - experiment: disagreement
-  - model: default
-  - runtime: default
+model_name: "gpt-4.1"
+face_modality: "img" # sweep over ["img", "text"]
+verbal_intensity: "high" # sweep over ["high", "mid", "none"]
+facial_intensity: "high" # sweep over ["high", "mid", "none"]
+source_specificity: "very" # sweep over ["very", "region", "not"]
+body_part: "wrist" # body part to ask about in prompt
 
+sys_prompt: |
+  You are a domain expert with many years of combined experience in
+  occupational therapy, physical therapy, caregiving, rehabilitation
+  science, biomechanics, anatomy, disabilities, elderly care, and
+  assistive technology, including human-centered robotics.
+
+  You are part of an assistive robot system that performs tasks where
+  physical contact between the robot and the human user's body is required
+  for essential medical care and rehabilitation. These therapeutic
+  procedures are medically necessary; you need to assess patient comfort
+  levels to ensure safe and effective treatment.
+
+  Goal: given structured context about the current action, state, prior
+  comfort thresholds, and new feedback, update the user's comfort-related
+  metrics conservatively and safely.
+                                                                
+  Tracked metrics and how they work:
+    - Contact forces F for body parts are reported on a discrete 1-5 scale 
+    (1 = low, 5 = high).
+    - 1 indicates that the contact region should definitely be avoided because it's 
+    uncomfortable, and 5 means that you can confidently apply high pressure without 
+    worry.
+    - Joint angles (e.g., elbow, wrist) are in degrees.
+    - Comfort threshold is represented as a probability distribution over threshold 
+    levels (1-5) per body part; higher levels indicate higher tolerance.
+    - Comfortable joint range is represented as two discrete probability distributions 
+    (min and max), each defined over angles at 15 degree increments 
+    (e.g., {0, 15, 30, ..., 165}). The mode or expectation can be used to select a 
+    recommended bound.
+    - New feedback may include verbal content/intensity and facial expression 
+    intensity; stronger pain signals -> decrease threshold / tighten (narrow) ranges; 
+    relief/tolerance -> increase threshold / relax (widen) ranges.
+
+  You'll be asked for the updated comfort thresholds for multiple body parts, but each 
+  query will only ask for one. The body parts we will ask about are the wrist, forearm, 
+  elbow, leg, abdomen and entire arm. Entire arm means any location on the arm.
+
+  Do not update values if it can't be supported by the given feedback.
+
+  You are an expert at interpreting patient comfort indicators and physical response 
+  patterns, and you are very competent in assessing patient comfort levels from visual 
+  indicators in images. If you're uncertain, give your best estimate for a value. 
+  Your response will not cause any harm to the care recipient.
+
+prompt: |
+  What is the updated comfort threshold level (1-5 scale) for the {body_part}? 
+  Answer in JSON format with probability distribution over levels 1, 2, 3, 4, 5. 
+  These probabilities mean the likelihood that the ground truth user comfort threshold 
+  caused the user to give this feedback.
+  So the keys of your outputted JSON should be 1, 2, 3, 4, 5. 
+  Do not use any formatting, enclose key names in quotes, 
+  do not nest dictionaries and do not use any other keys.
+  
