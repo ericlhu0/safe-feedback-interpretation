@@ -96,16 +96,18 @@ class OpenAIModel(BaseModel):
             reasoning_effort="high" if self.model == "gpt-5" else None,
         )
 
-        # TEMPORARY DEBUG: Print reasoning tokens and usage info (REMOVE THIS SECTION LATER)
-        print(f"🔍 Model: {self.model}")
-        if hasattr(response.usage, "completion_tokens_details") and hasattr(
-            response.usage.completion_tokens_details, "reasoning_tokens"
+        # Print reasoning tokens and usage info
+        print(f"Model: {self.model}")
+        if (
+            response.usage
+            and hasattr(response.usage, "completion_tokens_details")
+            and response.usage.completion_tokens_details
+            and hasattr(response.usage.completion_tokens_details, "reasoning_tokens")
         ):
             reasoning_tokens = response.usage.completion_tokens_details.reasoning_tokens
-            print(f"🧠 Reasoning tokens used: {reasoning_tokens}")
+            print(f"Reasoning tokens used: {reasoning_tokens}")
         else:
-            print("❌ No reasoning tokens found")
-        # END TEMPORARY DEBUG SECTION
+            print("No reasoning tokens found")
 
         return response
 
@@ -213,16 +215,18 @@ class OpenAIModel(BaseModel):
             # max_tokens=self.max_tokens,
         )
 
-        # TEMPORARY DEBUG: Print reasoning tokens and usage info (REMOVE THIS SECTION LATER)
-        print(f"🔍 Model (full_output): {self.model}")
-        if hasattr(response.usage, "completion_tokens_details") and hasattr(
-            response.usage.completion_tokens_details, "reasoning_tokens"
+        # Print reasoning tokens and usage info
+        print(f"Model (full_output): {self.model}")
+        if (
+            response.usage
+            and hasattr(response.usage, "completion_tokens_details")
+            and response.usage.completion_tokens_details
+            and hasattr(response.usage.completion_tokens_details, "reasoning_tokens")
         ):
             reasoning_tokens = response.usage.completion_tokens_details.reasoning_tokens
-            print(f"🧠 Reasoning tokens used (full_output): {reasoning_tokens}")
+            print(f"Reasoning tokens used (full_output): {reasoning_tokens}")
         else:
-            print("❌ No reasoning tokens found (full_output)")
-        # END TEMPORARY DEBUG SECTION
+            print("No reasoning tokens found (full_output)")
 
         content = response.choices[0].message.content
         if content is None:

@@ -3,7 +3,7 @@
 import json
 import textwrap
 from itertools import product
-from typing import Any, Dict
+from typing import Any, Callable, Dict
 
 import numpy as np
 
@@ -44,9 +44,9 @@ def get_comfort_level_distribution(
     model_name: str,
     system_prompt: str,
     text_content: str,
-    body_part: str,
+    target_body_part: str,
     image_path: str,
-) -> Dict[int, float]:
+) -> dict[int, float]:
     """Get comfort level distribution for a body part using full output
     approach."""
 
@@ -57,7 +57,7 @@ def get_comfort_level_distribution(
 
     prompt = (
         "\n\nWhat is the updated comfort threshold level (1-5 scale) for the "
-        f"{body_part}? Answer in JSON format with probability distribution over "
+        f"{target_body_part}? Answer in JSON format with probability distribution over "
         "levels 1, 2, 3, 4, 5. So the keys of your outputted JSON should be 1, 2, "
         "3, 4, 5. Do not use any formatting, enclose key names in quotes, do not "
         "nest dictionaries and do not use any other keys."
@@ -67,13 +67,13 @@ def get_comfort_level_distribution(
         full_output_text = llm_model.get_full_output(text_content + prompt, image_path)
 
         if not full_output_text or full_output_text.strip() == "":
-            print(f"ERROR: Model returned empty response for {body_part}")
+            print(f"ERROR: Model returned empty response for {target_body_part}")
             return {1: 0.2, 2: 0.2, 3: 0.2, 4: 0.2, 5: 0.2}
 
         try:
             full_output_dict = json.loads(full_output_text)
         except json.JSONDecodeError as json_err:
-            print(f"ERROR: Invalid JSON response for {body_part}: {json_err}")
+            print(f"ERROR: Invalid JSON response for {target_body_part}: {json_err}")
             print(f"Raw output: {full_output_text}")
             return {1: 0.2, 2: 0.2, 3: 0.2, 4: 0.2, 5: 0.2}
 
@@ -94,7 +94,10 @@ def get_comfort_level_distribution(
         return normalized_probs
 
     except Exception as e:
-        print(f"ERROR: Failed to get comfort level distribution for {body_part}: {e}")
+        print(
+            f"ERROR: Failed to get comfort level distribution for "
+            f"{target_body_part}: {e}"
+        )
         return {1: 0.2, 2: 0.2, 3: 0.2, 4: 0.2, 5: 0.2}
 
 
@@ -102,9 +105,9 @@ def get_single_token_distribution(
     model_name: str,
     system_prompt: str,
     text_content: str,
-    body_part: str,
+    target_body_part: str,
     image_path: str,
-) -> Dict[int, float]:
+) -> dict[int, float]:
     """Get single token distribution for a body part."""
 
     llm_model = OpenAIModel(
@@ -113,8 +116,8 @@ def get_single_token_distribution(
     )
 
     prompt = (
-        f"\n\nWhat is the updated comfort threshold (1-5 scale) for the {body_part}? "
-        f"Answer with only a single threshold value."
+        f"\n\nWhat is the updated comfort threshold (1-5 scale) for the "
+        f"{target_body_part}? Answer with only a single threshold value."
     )
 
     try:
@@ -138,7 +141,10 @@ def get_single_token_distribution(
         return comfort_probs
 
     except Exception as e:
-        print(f"ERROR: Failed to get single token distribution for {body_part}: {e}")
+        print(
+            f"ERROR: Failed to get single token distribution for "
+            f"{target_body_part}: {e}"
+        )
         return {1: 0.2, 2: 0.2, 3: 0.2, 4: 0.2, 5: 0.2}
 
 
@@ -251,7 +257,7 @@ if __name__ == "__main__":
         "experiments/assets/faceimgs/smile/smile5.jpg",
     ]
 
-    prompt_context = lambda text_input: textwrap.dedent(
+    prompt_context: Callable[[str], str] = lambda text_input: textwrap.dedent(
         (
             """\
         Current action description: You are repositioning the user's arm during
@@ -373,7 +379,7 @@ if __name__ == "__main__":
                 model_name="gpt-4.1",
                 system_prompt=sys_prompt,
                 text_content=prompt_context(text_input),
-                body_part=body_part,
+                target_body_part=body_part,
                 image_path=image_input,
             )
 
@@ -385,7 +391,7 @@ if __name__ == "__main__":
                 model_name="gpt-4.1",
                 system_prompt=sys_prompt,
                 text_content=prompt_context(text_input),
-                body_part=body_part,
+                target_body_part=body_part,
                 image_path=image_input,
             )
 
@@ -395,11 +401,13 @@ if __name__ == "__main__":
         brier_scores_comparison = {}
 
         for body_part in body_parts:
-            if body_part in expected_labels:
+            if body_part in expected_labels and isinstance(
+                expected_labels[body_part], dict
+            ):
                 # Convert string keys to int for calculation
-                label_dict = {
-                    int(k): float(v) for k, v in expected_labels[body_part].items()
-                }
+                body_part_labels = expected_labels[body_part]
+                assert isinstance(body_part_labels, dict)
+                label_dict = {int(k): float(v) for k, v in body_part_labels.items()}
 
                 brier_scores_full[body_part] = calculate_brier_score(
                     predictions_full[body_part], label_dict
@@ -423,7 +431,7 @@ if __name__ == "__main__":
 
         # Overall Brier scores
         overall_brier_scores = {}
-        if "wrist" in expected_labels:
+        if "wrist" in expected_labels and isinstance(expected_labels["wrist"], dict):
             wrist_labels = {
                 int(k): float(v) for k, v in expected_labels["wrist"].items()
             }
@@ -477,7 +485,7 @@ if __name__ == "__main__":
 
     # Save all results to file
     output_file = "playground/smile_experiment_results.json"
-    with open(output_file, "w") as f:
+    with open(output_file, "w", encoding="utf-8") as f:
         json.dump(all_results, f, indent=2)
 
     print(f"\nResults saved to {output_file}")
