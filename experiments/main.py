@@ -27,11 +27,11 @@ def load_existing_results(results_file: Path) -> set:
 
                     # Create identifier using config_used (all Hydra parameters),
                     # verbal_feedback, and facial_expression
-                    config_used = result.get("config_used", {})
-                    verbal_feedback = result.get("verbal_feedback", "")
-                    facial_expression = result.get("facial_expression", {})
-                    facial_description = facial_expression.get("description", "")
-                    facial_modality = facial_expression.get("modality", "")
+                    config_used = result["config_used"]
+                    verbal_feedback = result["verbal_feedback"]
+                    facial_expression = result["facial_expression"]
+                    facial_description = facial_expression["description"]
+                    facial_modality = facial_expression["modality"]
 
                     # Convert config dict to sorted tuple for hashing
                     config_tuple = tuple(sorted(config_used.items()))
@@ -54,8 +54,8 @@ def create_experiment_identifier(
     config_used: dict, verbal_feedback: str, facial_expression: dict
 ) -> tuple:
     """Create a unique identifier for an experiment combination."""
-    facial_description = facial_expression.get("description", "")
-    facial_modality = facial_expression.get("modality", "")
+    facial_description = facial_expression["description"]
+    facial_modality = facial_expression["modality"]
     config_tuple = tuple(sorted(config_used.items()))
     print("exp id", config_tuple, verbal_feedback, facial_description, facial_modality)
     return (config_tuple, verbal_feedback, facial_description, facial_modality)
@@ -67,12 +67,12 @@ def find_matching_labels(
     """Find labels from any scenario that matches verbal_intensity and
     facial_intensity, ignoring source_specificity."""
     for scenario in scenarios:
-        metadata = scenario.get("experiment_metadata", {})
+        metadata = scenario["experiment_metadata"]
         if (
-            metadata.get("verbal_intensity") == verbal_intensity
-            and metadata.get("facial_intensity") == facial_intensity
+            metadata["verbal_intensity"] == verbal_intensity
+            and metadata["facial_intensity"] == facial_intensity
         ):
-            labels = scenario.get("labels", {})
+            labels = scenario["labels"]
             if labels:  # Return first non-empty labels found
                 return labels
     return {}
@@ -92,9 +92,7 @@ def generate_feedback_from_metadata(
     metadata."""
 
     # Get verbal feedback options
-    verbal_options = verbal_data.get(source_specificity, {}).get(
-        verbal_intensity, ["Default feedback"]
-    )
+    verbal_options = verbal_data[source_specificity][verbal_intensity]
 
     # Get facial expression image files
     facial_dir = assets_dir / "faceimgs" / facial_intensity
@@ -116,9 +114,7 @@ def generate_feedback_from_metadata(
             )
         else:  # face_modality == "text"
             filename = path.name
-            text_description = img_to_text_map.get(
-                filename, f"facial expression showing {facial_intensity} intensity"
-            )
+            text_description = img_to_text_map[filename]
             facial_options.append({"modality": "text", "description": text_description})
 
     # Generate combinations
@@ -147,11 +143,11 @@ def filter_scenarios_by_metadata(
 
     matching_scenarios = []
     for scenario in scenarios:
-        metadata = scenario.get("experiment_metadata", {})
+        metadata = scenario["experiment_metadata"]
 
         if (
-            metadata.get("verbal_intensity") == verbal_intensity
-            and metadata.get("facial_intensity") == facial_intensity
+            metadata["verbal_intensity"] == verbal_intensity
+            and metadata["facial_intensity"] == facial_intensity
         ):
             matching_scenarios.append(scenario)
 
@@ -170,7 +166,7 @@ def build_model_input(
     input_context = base_config["input_context"]
 
     # Use the facial expression description directly
-    facial_desc = facial_expression.get("description", "No facial expression provided")
+    facial_desc = facial_expression["description"]
 
     # Build context string
     # Extract variables to avoid long lines
@@ -261,7 +257,7 @@ def main(cfg: DictConfig) -> None:
         print(f"Joint angles: {input_context['current_state']['joint_angles_deg']}")
 
         # Filter scenarios based on Hydra config parameters
-        all_scenarios = experiment_config.get("scenarios", [])
+        all_scenarios = experiment_config["scenarios"]
         filtered_scenarios = filter_scenarios_by_metadata(
             all_scenarios,
             verbal_intensity,
@@ -370,18 +366,15 @@ def main(cfg: DictConfig) -> None:
                 )
 
                 print(f"Verbal feedback: {verbal_feedback}")
-                facial_desc = facial_expression.get("description", "No description")
+                facial_desc = facial_expression["description"]
                 print(f"Facial expression: {facial_desc}")
                 print("Model input:")
                 print(model_input)
 
                 # Handle image input for facial expressions
                 image_path = None
-                if (
-                    face_modality == "img"
-                    and facial_expression.get("modality") == "image"
-                ):
-                    image_path = facial_expression.get("image_path")
+                if face_modality == "img" and facial_expression["modality"] == "image":
+                    image_path = facial_expression["image_path"]
                     print(f"Using image: {image_path}")
 
                 # Call model to get full output
@@ -401,7 +394,7 @@ def main(cfg: DictConfig) -> None:
 
                 # Extract labels for this scenario,
                 # fallback to matching labels by intensity
-                scenario_labels = scenario.get("labels", {})
+                scenario_labels = scenario["labels"]
                 if not scenario_labels:
                     scenario_labels = find_matching_labels(
                         all_scenarios,

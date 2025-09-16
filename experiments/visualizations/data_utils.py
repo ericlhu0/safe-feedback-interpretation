@@ -52,7 +52,7 @@ def get_available_variables(results: List[Dict]) -> Dict[str, List[str]]:
     variables = defaultdict(set)
 
     for result in results:
-        config = result.get("config_used", {})
+        config = result["config_used"]
 
         # Add experimental variables
         if "verbal_intensity" in config:
@@ -104,18 +104,18 @@ def group_results_by_axes(
     grouped = defaultdict(list)
 
     for result in results:
-        config = result.get("config_used", {})
+        config = result["config_used"]
 
         # Extract axis values
-        x_val = config.get(x_axis)
-        y_val = config.get(y_axis) if y_axis != "none" else "all"
+        x_val = config[x_axis]
+        y_val = config[y_axis] if y_axis != "none" else "all"
 
         if x_val is not None and y_val is not None:
             # Parse model response
-            model_response = parse_model_response(result.get("model_response", ""))
+            model_response = parse_model_response(result["model_response"])
 
             # Get labels for the specified body part
-            labels = result.get("labels", {}).get(body_part, {})
+            labels = result["labels"][body_part]
 
             # Include entries with model response even if labels are missing;
             # attach labels if present (may be empty dict)
@@ -168,14 +168,14 @@ def group_results_by_axes_with_filter(
         # Special handling for body_part multi-value filter
         # Use the actual body_part from config_used, not replicate the same response
         for result in results:
-            config = result.get("config_used", {})
+            config = result["config_used"]
 
             # Extract axis values
             x_val = config.get(x_axis)
             y_val = config.get(y_axis) if y_axis != "none" else "all"
 
             # Get the actual body part this experiment was run for
-            actual_body_part = config.get("body_part")
+            actual_body_part = config["body_part"]
 
             # Only include this result if it matches one of our requested body parts
             if (
@@ -186,11 +186,11 @@ def group_results_by_axes_with_filter(
             ):
 
                 # Parse model response (this is specific to this body part)
-                model_response = parse_model_response(result.get("model_response", ""))
+                model_response = parse_model_response(result["model_response"])
 
                 # Get labels for this specific body part
-                all_labels = result.get("labels", {})
-                labels = all_labels.get(actual_body_part, {})
+                all_labels = result["labels"]
+                labels = all_labels[actual_body_part]
 
                 # Include entries with model response even if labels are missing
                 if model_response:
@@ -201,14 +201,14 @@ def group_results_by_axes_with_filter(
     else:
         # Regular multi-value filter handling
         for result in results:
-            config = result.get("config_used", {})
+            config = result["config_used"]
 
             # Extract axis values
             x_val = config.get(x_axis)
             y_val = config.get(y_axis) if y_axis != "none" else "all"
 
             # Extract filter value
-            filter_val = config.get(multi_value_filter)
+            filter_val = config[multi_value_filter]
 
             # Only include results that match one of the specified filter values
             if (
@@ -220,10 +220,10 @@ def group_results_by_axes_with_filter(
             ):
 
                 # Parse model response
-                model_response = parse_model_response(result.get("model_response", ""))
+                model_response = parse_model_response(result["model_response"])
 
                 # Get labels for the specified body part (single body part in this case)
-                labels = result.get("labels", {}).get(body_part, {})
+                labels = result["labels"][body_part]
 
                 # Include entries with model response even if labels are missing
                 if model_response:
@@ -273,7 +273,7 @@ def calculate_average_distributions(
 
         for result in results:
             # Model predictions (convert to array format for comfort levels 1-5)
-            model_probs = result.get("parsed_response", {})
+            model_probs = result["parsed_response"]
             model_array = [0.0] * 5
             for level_str, prob in model_probs.items():
                 level_idx = int(level_str) - 1  # Convert 1-5 to 0-4
@@ -282,7 +282,7 @@ def calculate_average_distributions(
             model_distributions.append(model_array)
 
             # Ground truth labels
-            labels = result.get("body_part_labels", {})
+            labels = result["body_part_labels"]
             if labels:
                 label_array = [0.0] * 5
                 for level_str, prob in labels.items():
@@ -370,12 +370,12 @@ def calculate_metrics(grouped_results: Dict[Tuple, List[Dict]]) -> Dict[Tuple, D
         y_pred_discrete = []
 
         for result in results:
-            model_probs = result.get("parsed_response", {})
-            labels = result.get("body_part_labels", {})
+            model_probs = result["parsed_response"]
+            labels = result["body_part_labels"]
 
             # Convert to arrays
-            model_array = np.array([model_probs.get(str(i), 0.0) for i in range(1, 6)])
-            label_array = np.array([labels.get(str(i), 0.0) for i in range(1, 6)])
+            model_array = np.array([model_probs[str(i)] for i in range(1, 6)])
+            label_array = np.array([labels[str(i)] for i in range(1, 6)])
 
             if np.sum(model_array) > 0 and np.sum(label_array) > 0:
                 # Normalize to ensure they sum to 1
@@ -512,7 +512,7 @@ def print_data_summary(
                 for x_val in x_values:
                     # Sum counts across all filter values for this (x, y) combination
                     total_count = sum(
-                        len(grouped_results.get((x_val, y_val, filt_val), []))
+                        len(grouped_results[(x_val, y_val, filt_val)])
                         for filt_val in filter_values
                     )
                     print(f"{total_count:>12}", end="")
@@ -527,6 +527,6 @@ def print_data_summary(
             for y_val in y_values:
                 print(f"{y_val:>12}", end="")
                 for x_val in x_values:
-                    count = len(grouped_results.get((x_val, y_val), []))
+                    count = len(grouped_results[(x_val, y_val)])
                     print(f"{count:>8}", end="")
                 print()

@@ -1,7 +1,7 @@
 .DS_Store
 .python-version
 multirun/
-outputs/
+# outputs/
 commit.txt
 
 # Byte-compiled / optimized / DLL files

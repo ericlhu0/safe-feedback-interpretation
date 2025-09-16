@@ -194,8 +194,8 @@ def create_histogram_grid(
                         for filter_idx, filter_val in enumerate(filter_values):
                             if filter_val in filter_data:
                                 data = filter_data[filter_val]
-                                label_probs = data.get("label_mean")
-                                n_label_trials = data.get("n_label_trials", 0)
+                                label_probs = data["label_mean"]
+                                n_label_trials = data["n_label_trials"]
                                 if label_probs is not None and n_label_trials > 0:
                                     # Calculate offset for this filter's
                                     # ground truth lines
@@ -255,7 +255,7 @@ def create_histogram_grid(
                     data = stats[single_key]
                     model_probs = data["model_mean"]
                     model_std = data["model_std"]
-                    label_probs = data.get("label_mean")
+                    label_probs = data["label_mean"]
                     n_trials = data["n_trials"]
 
                     # Create prediction bars with error bars
@@ -276,7 +276,7 @@ def create_histogram_grid(
                     if (
                         not no_ground_truth
                         and label_probs is not None
-                        and data.get("n_label_trials", 0) > 0
+                        and data["n_label_trials"] > 0
                     ):
                         for k, prob in enumerate(label_probs):
                             if prob > 0.001:
@@ -462,13 +462,13 @@ def create_heatmap(
         for j, x_val in enumerate(x_values):
             key = (x_val, y_val)
             if key in metrics:
-                value = metrics[key].get(metric, np.nan)
+                value = metrics[key][metric]
                 matrix[i, j] = value
 
                 if not np.isnan(value):
                     # Check if there's a corresponding std metric
                     std_metric = metric.replace("_mean", "_std")
-                    std_value = metrics[key].get(std_metric, np.nan)
+                    std_value = metrics[key][std_metric]
 
                     if not np.isnan(std_value):
                         annotations[i, j] = f"{value:.3f}\n±{std_value:.3f}"
@@ -917,8 +917,7 @@ def main() -> None:
                             filtered_results = [
                                 r
                                 for r in filtered_results
-                                if r.get("config_used", {}).get(config_key)
-                                == filter_values[0]
+                                if r["config_used"][config_key] == filter_values[0]
                             ]
                     # Multi-value filters are handled later in grouping
             print(
@@ -940,7 +939,7 @@ def main() -> None:
             body_part=body_part_for_grouping,
             multi_value_filter=multi_value_filter,
             multi_filter_values=(
-                filters.get(multi_value_filter) if multi_value_filter else None
+                filters[multi_value_filter] if multi_value_filter else None
             ),
         )
         print_data_summary(grouped_results, args.x_axis, args.y_axis)
@@ -958,9 +957,7 @@ def main() -> None:
                 else body_parts_to_process[0]
             )
             # Pass the original filter order if it's a multi-value filter
-            filter_order = (
-                filters.get(multi_value_filter) if multi_value_filter else None
-            )
+            filter_order = filters[multi_value_filter] if multi_value_filter else None
             create_histogram_grid(
                 stats,
                 args.x_axis,
@@ -982,8 +979,8 @@ def main() -> None:
                 # Handle multi-value filters by creating separate heatmaps
                 # for each filter value
                 filter_values_order = (
-                    filters.get(multi_value_filter)
-                    if filters.get(multi_value_filter)
+                    filters[multi_value_filter]
+                    if filters[multi_value_filter]
                     else list(set(key[2] for key in metrics))
                 )
 
@@ -1013,7 +1010,7 @@ def main() -> None:
                             )
 
                             for metric in all_metrics:
-                                vmin, vmax = global_ranges.get(metric, (None, None))
+                                vmin, vmax = global_ranges[metric]
                                 create_heatmap(
                                     filter_metrics,
                                     args.x_axis,
@@ -1039,7 +1036,7 @@ def main() -> None:
                             filter_metrics = extract_filter_value_data(
                                 metrics, filter_value
                             )
-                            vmin, vmax = global_ranges.get(args.metric, (None, None))
+                            vmin, vmax = global_ranges[args.metric]
                             create_heatmap(
                                 filter_metrics,
                                 args.x_axis,
@@ -1067,7 +1064,7 @@ def main() -> None:
                     ]
                     print(f"🔥 Creating heatmaps for all {len(all_metrics)} metrics...")
                     for metric in all_metrics:
-                        vmin, vmax = global_ranges.get(metric, (None, None))
+                        vmin, vmax = global_ranges[metric]
                         create_heatmap(
                             metrics,
                             args.x_axis,
@@ -1080,7 +1077,7 @@ def main() -> None:
                             vmax=vmax,
                         )
                 else:
-                    vmin, vmax = global_ranges.get(args.metric, (None, None))
+                    vmin, vmax = global_ranges[args.metric]
                     create_heatmap(
                         metrics,
                         args.x_axis,
@@ -1113,8 +1110,8 @@ def main() -> None:
         if args.type == "heatmap":
             if multi_value_filter:
                 filter_values_order = (
-                    filters.get(multi_value_filter)
-                    if filters.get(multi_value_filter)
+                    filters[multi_value_filter]
+                    if filters[multi_value_filter]
                     else list(set(key[2] for key in grouped_results.keys()))
                 )
                 if args.metric == "all":

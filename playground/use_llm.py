@@ -170,8 +170,8 @@ def calculate_brier_score(
 
     brier_score = 0.0
     for key in all_keys:
-        pred_prob = pred_probs.get(key, 0.0)
-        true_prob = true_probs.get(key, 0.0)
+        pred_prob = pred_probs[key]
+        true_prob = true_probs[key]
         brier_score += (pred_prob - true_prob) ** 2
 
     return brier_score
@@ -420,8 +420,8 @@ if __name__ == "__main__":
                 )
 
         # Calculate metrics for wrist (primary analysis)
-        wrist_single = predictions_single.get("wrist", {})
-        wrist_full = predictions_full.get("wrist", {})
+        wrist_single = predictions_single["wrist"]
+        wrist_full = predictions_full["wrist"]
 
         single_token_entropy = calculate_entropy(wrist_single)
         single_token_max_prob = calculate_max_prob(wrist_single)
