@@ -31,7 +31,12 @@ pip install -e ".[develop]"
 
 Checking model confidence with input contradictions across modalities
 ```bash
-python experiments/experiment_runner.py
+python experiments_hydra/main.py -m \  model_name=gpt-4.1 \          
+  face_modality=text \                  
+  facial_intensity=none \
+  verbal_intensity=none \
+  source_specificity=very,region,not \
+  body_part=wrist,forearm,upper_arm,entire_arm,leg
 ```
 
 ### Thanks

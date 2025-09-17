@@ -93,7 +93,21 @@ class OpenAIModel(BaseModel):
             # max_tokens=self.max_tokens,
             logprobs=True,
             top_logprobs=10,
+            reasoning_effort="high" if self.model == "gpt-5" else None,
         )
+
+        # Print reasoning tokens and usage info
+        print(f"Model: {self.model}")
+        if (
+            response.usage
+            and hasattr(response.usage, "completion_tokens_details")
+            and response.usage.completion_tokens_details
+            and hasattr(response.usage.completion_tokens_details, "reasoning_tokens")
+        ):
+            reasoning_tokens = response.usage.completion_tokens_details.reasoning_tokens
+            print(f"Reasoning tokens used: {reasoning_tokens}")
+        else:
+            print("No reasoning tokens found")
 
         return response
 
@@ -200,6 +214,19 @@ class OpenAIModel(BaseModel):
             temperature=self.temperature,
             # max_tokens=self.max_tokens,
         )
+
+        # Print reasoning tokens and usage info
+        print(f"Model (full_output): {self.model}")
+        if (
+            response.usage
+            and hasattr(response.usage, "completion_tokens_details")
+            and response.usage.completion_tokens_details
+            and hasattr(response.usage.completion_tokens_details, "reasoning_tokens")
+        ):
+            reasoning_tokens = response.usage.completion_tokens_details.reasoning_tokens
+            print(f"Reasoning tokens used (full_output): {reasoning_tokens}")
+        else:
+            print("No reasoning tokens found (full_output)")
 
         content = response.choices[0].message.content
         if content is None:

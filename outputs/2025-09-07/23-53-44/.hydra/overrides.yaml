@@ -1,0 +1,6 @@
+- model_name=gpt-4.1-nano
+- face_modality=text
+- verbal_intensity=high
+- facial_intensity=high
+- source_specificity=very
+- body_part=wrist

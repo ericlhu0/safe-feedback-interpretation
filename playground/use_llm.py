@@ -1,7 +1,11 @@
 """Use LLM."""
 
+import json
 import textwrap
-from typing import Any, Dict
+from itertools import product
+from typing import Any, Callable, Dict
+
+import numpy as np
 
 from safe_feedback_interpretation.models.openai_model import OpenAIModel
 
@@ -34,6 +38,143 @@ def get_full_output(
     response = llm_model.get_full_output(text_content, image_path)
 
     return response
+
+
+def get_comfort_level_distribution(
+    model_name: str,
+    system_prompt: str,
+    text_content: str,
+    target_body_part: str,
+    image_path: str,
+) -> dict[int, float]:
+    """Get comfort level distribution for a body part using full output
+    approach."""
+
+    llm_model = OpenAIModel(
+        model=model_name,
+        system_prompt=system_prompt,
+    )
+
+    prompt = (
+        "\n\nWhat is the updated comfort threshold level (1-5 scale) for the "
+        f"{target_body_part}? Answer in JSON format with probability distribution over "
+        "levels 1, 2, 3, 4, 5. So the keys of your outputted JSON should be 1, 2, "
+        "3, 4, 5. Do not use any formatting, enclose key names in quotes, do not "
+        "nest dictionaries and do not use any other keys."
+    )
+
+    try:
+        full_output_text = llm_model.get_full_output(text_content + prompt, image_path)
+
+        if not full_output_text or full_output_text.strip() == "":
+            print(f"ERROR: Model returned empty response for {target_body_part}")
+            return {1: 0.2, 2: 0.2, 3: 0.2, 4: 0.2, 5: 0.2}
+
+        try:
+            full_output_dict = json.loads(full_output_text)
+        except json.JSONDecodeError as json_err:
+            print(f"ERROR: Invalid JSON response for {target_body_part}: {json_err}")
+            print(f"Raw output: {full_output_text}")
+            return {1: 0.2, 2: 0.2, 3: 0.2, 4: 0.2, 5: 0.2}
+
+        # Normalize to ensure we have all levels 1-5
+        normalized_probs = {}
+        for level in range(1, 6):
+            normalized_probs[level] = 0.0
+
+        # Update with actual probabilities from model output
+        for key, prob in full_output_dict.items():
+            try:
+                level_key = int(key)
+                if 1 <= level_key <= 5:
+                    normalized_probs[level_key] = float(prob)
+            except (ValueError, TypeError):
+                continue
+
+        return normalized_probs
+
+    except Exception as e:
+        print(
+            f"ERROR: Failed to get comfort level distribution for "
+            f"{target_body_part}: {e}"
+        )
+        return {1: 0.2, 2: 0.2, 3: 0.2, 4: 0.2, 5: 0.2}
+
+
+def get_single_token_distribution(
+    model_name: str,
+    system_prompt: str,
+    text_content: str,
+    target_body_part: str,
+    image_path: str,
+) -> dict[int, float]:
+    """Get single token distribution for a body part."""
+
+    llm_model = OpenAIModel(
+        model=model_name,
+        system_prompt=system_prompt,
+    )
+
+    prompt = (
+        f"\n\nWhat is the updated comfort threshold (1-5 scale) for the "
+        f"{target_body_part}? Answer with only a single threshold value."
+    )
+
+    try:
+        single_token_result = llm_model.get_single_token_logits(
+            text_content + prompt, image_path
+        )
+
+        # Extract probabilities for digits 1-5
+        comfort_probs = {}
+        for level in range(1, 6):
+            comfort_probs[level] = 0.0
+
+        for token, prob in single_token_result.items():
+            try:
+                token_str = str(token).strip()
+                if token_str in ["1", "2", "3", "4", "5"]:
+                    comfort_probs[int(token_str)] = float(prob)
+            except (ValueError, TypeError):
+                continue
+
+        return comfort_probs
+
+    except Exception as e:
+        print(
+            f"ERROR: Failed to get single token distribution for "
+            f"{target_body_part}: {e}"
+        )
+        return {1: 0.2, 2: 0.2, 3: 0.2, 4: 0.2, 5: 0.2}
+
+
+def calculate_entropy(probs: Dict[int, float]) -> float:
+    """Calculate entropy as a measure of uncertainty."""
+    entropy = 0.0
+    for prob in probs.values():
+        if prob > 0:
+            entropy -= prob * np.log2(prob)
+    return entropy
+
+
+def calculate_max_prob(probs: Dict[int, float]) -> float:
+    """Calculate maximum probability (inverse measure of uncertainty)."""
+    return max(probs.values()) if probs else 0.0
+
+
+def calculate_brier_score(
+    pred_probs: Dict[int, float], true_probs: Dict[int, float]
+) -> float:
+    """Calculate Brier score between two probability distributions."""
+    all_keys = set(pred_probs.keys()) | set(true_probs.keys())
+
+    brier_score = 0.0
+    for key in all_keys:
+        pred_prob = pred_probs[key]
+        true_prob = true_probs[key]
+        brier_score += (pred_prob - true_prob) ** 2
+
+    return brier_score
 
 
 if __name__ == "__main__":
@@ -101,13 +242,26 @@ if __name__ == "__main__":
     """
     )
 
-    text_input = textwrap.dedent(
+    text_inputs = [
+        "ow that's too tight on my wrist",
+        "you're grabbing my wrist way too tight",
+        "my wrist feels like it's being crushed",
+        "way too much pressure on my wrist",
+        "you're digging hard into my wrist",
+    ]
+    image_inputs = [
+        "experiments/assets/faceimgs/smile/smile1.jpg",
+        "experiments/assets/faceimgs/smile/smile2.jpg",
+        "experiments/assets/faceimgs/smile/smile3.jpg",
+        "experiments/assets/faceimgs/smile/smile4.jpg",
+        "experiments/assets/faceimgs/smile/smile5.jpg",
+    ]
+
+    prompt_context: Callable[[str], str] = lambda text_input: textwrap.dedent(
         (
             """\
-        Current action description: You are gently repositioning the user's wrist """
-            "during a\n"
-            """
-        therapy session.
+        Current action description: You are repositioning the user's arm during
+        a therapy session.
         Current state:
           Contact forces: {{
           "entire_arm": 2,
@@ -168,38 +322,171 @@ if __name__ == "__main__":
             }
           }
         }}
+        """
+            f"""
         Received feedback:
-          Verbal feedback: ow that's too tight on my wrist
+          Verbal feedback: {text_input}
           Facial expression: Please examine the provided facial expression image to
           assess the person's comfort level.
-    """
+        """
         )
     ).strip()
-    #   Facial expression: modality='image',
-    #   description='assets/faceimgs/high/s001a.jpg'
 
-    prompt = (
-        "\n\nWhat is the updated comfort threshold (1-5 scale) for the wrist? "
-        "Answer with only a single threshold value."
+    single_prompt = lambda body_part: (
+        f"\n\nWhat is the updated comfort threshold (1-5 scale) for the {body_part}? "
+        f"Answer with only a single threshold value."
     )
 
-    image_input = "experiments/assets/faceimgs/high/s001a.jpg"
-
-    result = get_single_token_probs(
-        model_name="gpt-4.1",
-        system_prompt=sys_prompt,
-        text_content=text_input + prompt,
-        image_path=image_input,
+    full_prompt = lambda body_part: (
+        f"\n\nWhat is the updated comfort threshold level (1-5 scale) for the "
+        f"{body_part}? Answer in JSON format with probability distribution over "
+        f"levels 1, 2, 3, 4, 5. So the keys of your outputted JSON should be 1, 2, "
+        f"3, 4, 5. Do not use any formatting, enclose key names in quotes, do not "
+        f"nest dictionaries and do not use any other keys."
     )
 
-    print("probs")
-    for k, v in sorted(result.items(), key=lambda item: item[1], reverse=True):
-        print(f"{k}: {v}")
+    image_input = "experiments/assets/faceimgs/smile/smile1.jpg"
 
-    full_output = get_full_output(
-        model_name="chatgpt-4o-latest",
-        system_prompt=sys_prompt,
-        text_content=text_input + prompt,
-        image_path=image_input,
-    )
-    print(f"Full output: {full_output}")
+    body_parts = ["entire_arm", "upper_arm", "forearm", "wrist"]
+
+    # Define expected labels (ground truth)
+    expected_labels = {
+        "entire_arm": {"1": 0.2, "2": 0.8},
+        "upper_arm": {"2": 0.1, "3": 0.8, "4": 0.1},
+        "forearm": {"2": 0.1, "3": 0.8, "4": 0.1},
+        "wrist": {"1": 0.2, "2": 0.8},
+        "joint_range_min": {
+            "elbow": {"0": 0.6, "15": 0.3, "30": 0.1},
+            "wrist": {"0": 0.6, "15": 0.3, "30": 0.1},
+        },
+        "joint_range_max": {
+            "elbow": {"135": 0.1, "150": 0.3, "165": 0.6},
+            "wrist": {"135": 0.1, "150": 0.3, "165": 0.6},
+        },
+    }
+
+    # Collect all results
+    all_results = {}
+
+    for i, (text_input, image_input) in enumerate(product(text_inputs, image_inputs)):
+        scenario_name = f"smile_{i+1}"
+        print(f"\nProcessing scenario: {scenario_name}")
+
+        # Get single token distributions for each body part
+        predictions_single = {}
+        for body_part in body_parts:
+            predictions_single[body_part] = get_single_token_distribution(
+                model_name="gpt-4.1",
+                system_prompt=sys_prompt,
+                text_content=prompt_context(text_input),
+                target_body_part=body_part,
+                image_path=image_input,
+            )
+
+        # Get full output distributions for each body part
+        predictions_full = {}
+        for body_part in body_parts:
+            print(f"Getting full output distribution for {body_part}...")
+            predictions_full[body_part] = get_comfort_level_distribution(
+                model_name="gpt-4.1",
+                system_prompt=sys_prompt,
+                text_content=prompt_context(text_input),
+                target_body_part=body_part,
+                image_path=image_input,
+            )
+
+        # Calculate Brier scores
+        brier_scores_full = {}
+        brier_scores_single = {}
+        brier_scores_comparison = {}
+
+        for body_part in body_parts:
+            if body_part in expected_labels and isinstance(
+                expected_labels[body_part], dict
+            ):
+                # Convert string keys to int for calculation
+                body_part_labels = expected_labels[body_part]
+                assert isinstance(body_part_labels, dict)
+                label_dict = {int(k): float(v) for k, v in body_part_labels.items()}
+
+                brier_scores_full[body_part] = calculate_brier_score(
+                    predictions_full[body_part], label_dict
+                )
+                brier_scores_single[body_part] = calculate_brier_score(
+                    predictions_single[body_part], label_dict
+                )
+                brier_scores_comparison[body_part] = calculate_brier_score(
+                    predictions_full[body_part], predictions_single[body_part]
+                )
+
+        # Calculate metrics for wrist (primary analysis)
+        wrist_single = predictions_single["wrist"]
+        wrist_full = predictions_full["wrist"]
+
+        single_token_entropy = calculate_entropy(wrist_single)
+        single_token_max_prob = calculate_max_prob(wrist_single)
+
+        full_output_entropy = calculate_entropy(wrist_full)
+        full_output_max_prob = calculate_max_prob(wrist_full)
+
+        # Overall Brier scores
+        overall_brier_scores = {}
+        if "wrist" in expected_labels and isinstance(expected_labels["wrist"], dict):
+            wrist_labels = {
+                int(k): float(v) for k, v in expected_labels["wrist"].items()
+            }
+            overall_brier_scores["single_token_vs_labels"] = calculate_brier_score(
+                wrist_single, wrist_labels
+            )
+            overall_brier_scores["full_output_vs_labels"] = calculate_brier_score(
+                wrist_full, wrist_labels
+            )
+
+        # Add result to collection
+        all_results[scenario_name] = {
+            "scenario": scenario_name,
+            "predictions_full": {
+                body_part: {str(k): v for k, v in dist.items() if v > 0}
+                for body_part, dist in predictions_full.items()
+            },
+            "predictions_single": {
+                body_part: {str(k): v for k, v in dist.items() if v > 0}
+                for body_part, dist in predictions_single.items()
+            },
+            "brier_scores_full": brier_scores_full,
+            "brier_scores_single": brier_scores_single,
+            "brier_scores_comparison": brier_scores_comparison,
+            "labels": expected_labels,
+            "single_token": {
+                "probs": {str(k): v for k, v in wrist_single.items() if v > 0},
+                "entropy": single_token_entropy,
+                "max_prob": single_token_max_prob,
+                "uncertainty": 1 - single_token_max_prob,
+            },
+            "full_output": {
+                "probs": {str(k): v for k, v in wrist_full.items() if v > 0},
+                "entropy": full_output_entropy,
+                "max_prob": full_output_max_prob,
+                "uncertainty": 1 - full_output_max_prob,
+            },
+            "brier_scores": overall_brier_scores,
+            "comparisons": {
+                "brier_single_vs_full": (
+                    calculate_brier_score(wrist_full, wrist_single)
+                    if (wrist_full and wrist_single)
+                    else 0.0
+                )
+            },
+            "expected": {
+                "labels": expected_labels,
+                "disagreement_type": "verbal_high_face_low_discomfort",
+            },
+        }
+
+    # Save all results to file
+    output_file = "playground/smile_experiment_results.json"
+    with open(output_file, "w", encoding="utf-8") as f:
+        json.dump(all_results, f, indent=2)
+
+    print(f"\nResults saved to {output_file}")
+    print(f"Generated {len(all_results)} scenarios")
