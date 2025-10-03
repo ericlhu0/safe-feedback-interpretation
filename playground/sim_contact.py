@@ -13,7 +13,7 @@ def simulation_loop():
     planeId = p.loadURDF("plane.urdf")
 
     # Load big collision block on the ground
-    blockId = p.loadURDF("cube_small.urdf", [0.5, 0.0, 0.5], globalScaling=10)
+    blockId = p.loadURDF("cube_small.urdf", [0.5, 0.0, 0.5], globalScaling=10, useFixedBase=True)
 
     pandaId = p.loadURDF("franka_panda/panda.urdf", [0, 0, 0], useFixedBase=True)
 
@@ -37,7 +37,7 @@ def simulation_loop():
     goalBlockId = p.loadURDF("cube_small.urdf", targetPos, globalScaling=0.5)
     p.changeVisualShape(goalBlockId, -1, rgbaColor=[0, 1, 0, 0.5])
 
-    step_size = 0.05
+    step_size = 0.01
     print("\nControls:")
     print("w/s: forward/backward (x-axis)")
     print("a/d: left/right (y-axis)")
@@ -90,6 +90,28 @@ def simulation_loop():
             )
 
         p.stepSimulation()
+
+        # Check for collisions between robot and environment
+        contact_points = p.getContactPoints(bodyA=pandaId)
+        if contact_points:
+            for contact in contact_points:
+                bodyA = contact[1]
+                bodyB = contact[2]
+                linkA = contact[3]
+                linkB = contact[4]
+                contact_normal = contact[7]
+                contact_distance = contact[8]
+                contact_force = contact[9]
+
+                # Get link name for better readability
+                if linkA >= 0:
+                    linkA_name = p.getJointInfo(bodyA, linkA)[12].decode('utf-8')
+                else:
+                    linkA_name = "base"
+
+                print(f"Collision: Robot link '{linkA_name}' with body {bodyB} (link {linkB}), "
+                      f"distance: {contact_distance:.4f}, force: {contact_force:.4f}")
+
         time.sleep(1.0/240.0)
 
     p.disconnect()
