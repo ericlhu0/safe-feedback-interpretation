@@ -267,7 +267,6 @@ class MujocoTorqueMPC(
             total_cost += self._stage_cost(data, control, goal)
 
         total_cost += self._terminal_cost(data, goal)
-        print(total_cost)
         return total_cost
 
     def _stage_cost(
@@ -293,7 +292,6 @@ class MujocoTorqueMPC(
         torque_cost = 0
 
         total = pos_cost + orient_cost + joint_pos_cost + torque_cost
-        print(f"Stage: pos={pos_cost:.4f}, orient={orient_cost:.4f}, joint_pos={joint_pos_cost:.4f}, torque={torque_cost:.4f}, total={total:.4f}")
         return total
 
     def _terminal_cost(self, data: mujoco.MjData, goal: MujocoGoal) -> float:
