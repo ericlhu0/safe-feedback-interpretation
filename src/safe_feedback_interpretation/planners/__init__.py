@@ -11,6 +11,14 @@ from .planar_car_mpc import (
     PlanarCarMPC,
     PlanarCarState,
 )
+from .mujoco_torque_mpc import (
+    MujocoArmDynamics,
+    MujocoArmState,
+    MujocoGoal,
+    MujocoMPCWeights,
+    MujocoTorqueControl,
+    MujocoTorqueMPC,
+)
 
 __all__ = [
     "BasePlanner",
@@ -24,5 +32,11 @@ __all__ = [
     "PlanarCarGoal",
     "PlanarCarMPC",
     "PlanarCarState",
+    "MujocoArmDynamics",
+    "MujocoArmState",
+    "MujocoGoal",
+    "MujocoMPCWeights",
+    "MujocoTorqueControl",
+    "MujocoTorqueMPC",
     "StateT",
 ]
