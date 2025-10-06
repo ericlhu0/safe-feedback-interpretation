@@ -59,9 +59,17 @@ def _load_model(obstacles: list[dict] | None = None) -> tuple[mujoco.MjModel, mu
     with open(model_path, "r", encoding="utf-8") as handle:
         xml_content = handle.read()
 
+    # Add SMPL mesh asset
+    smpl_mesh_path = os.path.join(script_dir, "smpl", "smpl.obj")
+    smpl_asset = f'<mesh name="smpl_human" file="{smpl_mesh_path}"/>'
+    xml_content = xml_content.replace("</asset>", smpl_asset + "\n  </asset>")
+
     extra_bodies = """
             <body name="target" pos="0.35 0.25 0.75" mocap="true">
                 <geom type="box" size="0.02 0.02 0.02" rgba="0 1 0 0.5" contype="0" conaffinity="0"/>
+            </body>
+            <body name="human" pos="0.5 0.0 0.25">
+                <geom type="mesh" mesh="smpl_human" rgba="0.8 0.6 0.4 1"/>
             </body>
             <body name="x_axis" pos="0.25 0 0">
                 <geom type="cylinder" size="0.005 0.25" rgba="1 0 0 1" contype="0" conaffinity="0" euler="0 1.5708 0"/>
@@ -120,14 +128,11 @@ def simulation_loop(obstacles: list[dict] | None = None) -> None:
         horizon=16,
         num_samples=96,
         seed=4,
-        torque_sample_std=1,
+        torque_sample_std=0.75,
     )
 
-    target_pos = np.array([0.35, 0.25, 0.75], dtype=np.float64)
+    target_pos = np.array([0.75, 0.00, 0.10], dtype=np.float64)
     step_size = 0.02
-
-    lower_bounds = np.array([0.1, -0.2, 0.5])
-    upper_bounds = np.array([0.6, 0.3, 0.9])
 
     print("\nControls:")
     print("w/s: forward/backward (x-axis)")
@@ -149,7 +154,8 @@ def simulation_loop(obstacles: list[dict] | None = None) -> None:
             target_pos[2] += step_size
         elif keycode in (ord("e"), ord("E")):
             target_pos[2] -= step_size
-        target_pos = np.clip(target_pos, lower_bounds, upper_bounds)
+        
+        print(f"New target position: {target_pos}")
 
     with mujoco.viewer.launch_passive(model, data, key_callback=key_callback) as viewer:
         while viewer.is_running():
@@ -194,7 +200,7 @@ def simulation_loop(obstacles: list[dict] | None = None) -> None:
 if __name__ == "__main__":
 
     obstacles = [
-        {"pos": [0.4, 0.0, 0.6], "size": [0.2, 0.2, 0.2]},
+        # {"pos": [0.4, 0.0, 0.6], "size": [0.2, 0.2, 0.2]},
         # {"pos": [0.3, 0.2, 0.7], "shape": "sphere", "size": [0.05]},
     ]
 
