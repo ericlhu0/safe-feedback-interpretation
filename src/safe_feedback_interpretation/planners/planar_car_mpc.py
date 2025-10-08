@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
 import random
+from dataclasses import dataclass
 from typing import Iterable, Sequence, Tuple
 
 from .base_planner import BasePlanner
@@ -184,7 +184,8 @@ class PlanarCarMPC(BasePlanner[PlanarCarState, PlanarCarControl, PlanarCarGoal])
     def plan(
         self, state: PlanarCarState, goal: PlanarCarGoal
     ) -> Tuple[float, Tuple[PlanarCarControl, ...]]:
-        """Return the optimal cost and control sequence for the current horizon."""
+        """Return the optimal cost and control sequence for the current
+        horizon."""
         best_cost = math.inf
         best_sequence: Tuple[PlanarCarControl, ...] | None = None
 
@@ -201,15 +202,16 @@ class PlanarCarMPC(BasePlanner[PlanarCarState, PlanarCarControl, PlanarCarGoal])
     def iter_plans(
         self, state: PlanarCarState, goal: PlanarCarGoal
     ) -> Iterable[Tuple[float, Tuple[PlanarCarControl, ...]]]:
-        """Yield sampled plan candidates (cost, controls) in evaluation order."""
+        """Yield sampled plan candidates (cost, controls) in evaluation
+        order."""
         for sequence in self._candidate_sequences():
             cost = self._evaluate_sequence(state, goal, sequence)
             yield cost, sequence
 
     def _candidate_sequences(self) -> Iterable[Tuple[PlanarCarControl, ...]]:
-        """Generate candidate control sequences via deterministic seeding and sampling."""
-        for sequence in self._deterministic_sequences:
-            yield sequence
+        """Generate candidate control sequences via deterministic seeding and
+        sampling."""
+        yield from self._deterministic_sequences
 
         seen = {self._sequence_key(seq) for seq in self._deterministic_sequences}
 
@@ -260,7 +262,9 @@ class PlanarCarMPC(BasePlanner[PlanarCarState, PlanarCarControl, PlanarCarGoal])
         return tuple(sequences)
 
     @staticmethod
-    def _sequence_key(sequence: Tuple[PlanarCarControl, ...]) -> Tuple[Tuple[float, float], ...]:
+    def _sequence_key(
+        sequence: Tuple[PlanarCarControl, ...],
+    ) -> Tuple[Tuple[float, float], ...]:
         """Return a hashable key for a control sequence."""
         return tuple((ctrl.acceleration, ctrl.yaw_rate) for ctrl in sequence)
 
@@ -300,9 +304,7 @@ class PlanarCarMPC(BasePlanner[PlanarCarState, PlanarCarControl, PlanarCarGoal])
         speed_error = state.speed - goal.target_speed
         speed_cost = weights.speed * (speed_error**2)
 
-        control_cost = weights.control * (
-            control.acceleration**2 + control.yaw_rate**2
-        )
+        control_cost = weights.control * (control.acceleration**2 + control.yaw_rate**2)
         obstacle_cost = weights.obstacle * self._obstacle_penalty(state)
 
         return position_cost + heading_cost + speed_cost + control_cost + obstacle_cost
@@ -341,9 +343,7 @@ class PlanarCarMPC(BasePlanner[PlanarCarState, PlanarCarControl, PlanarCarGoal])
 
         return violation**2
 
-    def step(
-        self, state: PlanarCarState, control: PlanarCarControl
-    ) -> PlanarCarState:
+    def step(self, state: PlanarCarState, control: PlanarCarControl) -> PlanarCarState:
         """Advance the system dynamics with the planner's embedded model."""
         return self.dynamics.step(state, control)
 

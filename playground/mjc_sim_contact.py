@@ -1,3 +1,5 @@
+"""Simulation loop for contact testing with MuJoCo."""
+
 import os
 import time
 
@@ -5,14 +7,18 @@ import mujoco
 import mujoco.viewer
 import numpy as np
 
+
 def simulation_loop():
+    """Run the simulation loop."""
     # Load official Panda model
     script_dir = os.path.dirname(os.path.abspath(__file__))
     # Use the "no hand" variant because it keeps default collision masks enabled
-    model_path = os.path.join(script_dir, "mujoco_menagerie/franka_emika_panda/panda_nohand.xml")
+    model_path = os.path.join(
+        script_dir, "mujoco_menagerie/franka_emika_panda/panda_nohand.xml"
+    )
 
     # Load base model
-    with open(model_path, 'r') as f:
+    with open(model_path, "r", encoding="utf-8") as f:
         xml_content = f.read()
 
     # Insert custom bodies before </worldbody>
@@ -26,7 +32,7 @@ def simulation_loop():
             </body>
 """
 
-    xml_content = xml_content.replace('</worldbody>', custom_bodies + '  </worldbody>')
+    xml_content = xml_content.replace("</worldbody>", custom_bodies + "  </worldbody>")
 
     # Change to model directory for relative paths
     model_dir = os.path.dirname(model_path)
@@ -40,7 +46,7 @@ def simulation_loop():
     data = mujoco.MjData(model)
 
     # Get IDs
-    end_effector_id = model.site('attachment_site').id
+    end_effector_id = model.site("attachment_site").id
 
     # Target position and orientation
     targetPos = np.array([0.3, 0.25, 0.85])
@@ -57,17 +63,17 @@ def simulation_loop():
     def key_callback(keycode):
         nonlocal targetPos
 
-        if keycode in (ord('w'), ord('W')):
+        if keycode in (ord("w"), ord("W")):
             targetPos[0] += step_size
-        elif keycode in (ord('s'), ord('S')):
+        elif keycode in (ord("s"), ord("S")):
             targetPos[0] -= step_size
-        elif keycode in (ord('a'), ord('A')):
+        elif keycode in (ord("a"), ord("A")):
             targetPos[1] += step_size
-        elif keycode in (ord('d'), ord('D')):
+        elif keycode in (ord("d"), ord("D")):
             targetPos[1] -= step_size
-        elif keycode in (ord('q'), ord('Q')):
+        elif keycode in (ord("q"), ord("Q")):
             targetPos[2] += step_size
-        elif keycode in (ord('e'), ord('E')):
+        elif keycode in (ord("e"), ord("E")):
             targetPos[2] -= step_size
 
     with mujoco.viewer.launch_passive(model, data, key_callback=key_callback) as viewer:
@@ -96,8 +102,12 @@ def simulation_loop():
             # Check for collisions
             for i in range(data.ncon):
                 contact = data.contact[i]
-                geom1_name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, contact.geom1)
-                geom2_name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_GEOM, contact.geom2)
+                geom1_name = mujoco.mj_id2name(
+                    model, mujoco.mjtObj.mjOBJ_GEOM, contact.geom1
+                )
+                geom2_name = mujoco.mj_id2name(
+                    model, mujoco.mjtObj.mjOBJ_GEOM, contact.geom2
+                )
 
                 if geom1_name is None:
                     geom1_body = mujoco.mj_id2name(
@@ -116,7 +126,7 @@ def simulation_loop():
                     geom2_name = f"{geom2_body or 'body'}::geom{contact.geom2}"
 
                 # Skip floor contacts with robot base
-                if 'floor' in [geom1_name, geom2_name]:
+                if "floor" in [geom1_name, geom2_name]:
                     continue
 
                 mujoco.mj_contactForce(model, data, i, contact_wrench)

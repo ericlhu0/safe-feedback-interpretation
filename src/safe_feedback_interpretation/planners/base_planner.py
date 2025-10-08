@@ -5,7 +5,6 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Generic, Tuple, TypeVar
 
-
 StateT = TypeVar("StateT")
 ControlT = TypeVar("ControlT")
 GoalT = TypeVar("GoalT")
@@ -16,11 +15,12 @@ class BasePlanner(ABC, Generic[StateT, ControlT, GoalT]):
 
     @abstractmethod
     def plan(self, state: StateT, goal: GoalT) -> Tuple[float, Tuple[ControlT, ...]]:
-        """Return optimal cost and control sequence from a given state toward a goal."""
+        """Return optimal cost and control sequence from a given state toward a
+        goal."""
 
     def solve(self, state: StateT, goal: GoalT) -> ControlT:
         """Return the first control of the optimal plan."""
-        cost, sequence = self.plan(state, goal)
+        _, sequence = self.plan(state, goal)
         if not sequence:
             raise RuntimeError(
                 "plan must return at least one control action; got empty sequence"

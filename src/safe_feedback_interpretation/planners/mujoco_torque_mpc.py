@@ -11,7 +11,6 @@ from numpy.typing import NDArray
 
 from .base_planner import BasePlanner
 
-
 ArrayLike = NDArray[np.float64]
 
 
@@ -24,6 +23,7 @@ class MujocoArmState:
 
     @classmethod
     def from_data(cls, model: mujoco.MjModel, data: mujoco.MjData) -> "MujocoArmState":
+        """Create state from MuJoCo model and data."""
         return cls(qpos=data.qpos[: model.nq].copy(), qvel=data.qvel[: model.nv].copy())
 
 
@@ -60,7 +60,9 @@ class MujocoGoal:
                 np.array(self.orientation, dtype=np.float64, copy=True),
             )
             if self.orientation.shape != (4,):
-                raise ValueError("goal orientation must be a quaternion with shape (4,)")
+                raise ValueError(
+                    "goal orientation must be a quaternion with shape (4,)"
+                )
         if self.joint_positions is not None:
             object.__setattr__(
                 self,
@@ -96,7 +98,10 @@ class MujocoArmDynamics:
         self._nv = model.nv
         self._nu = model.nu
 
-    def step(self, state: MujocoArmState, control: MujocoTorqueControl) -> MujocoArmState:
+    def step(
+        self, state: MujocoArmState, control: MujocoTorqueControl
+    ) -> MujocoArmState:
+        """Step the dynamics forward one timestep."""
         data = mujoco.MjData(self.model)
         data.qpos[: self._nq] = state.qpos
         data.qvel[: self._nv] = state.qvel
@@ -107,9 +112,7 @@ class MujocoArmDynamics:
         return MujocoArmState.from_data(self.model, data)
 
 
-class MujocoTorqueMPC(
-    BasePlanner[MujocoArmState, MujocoTorqueControl, MujocoGoal]
-):
+class MujocoTorqueMPC(BasePlanner[MujocoArmState, MujocoTorqueControl, MujocoGoal]):
     """Sampling-based MPC that plans joint torques for MuJoCo manipulators."""
 
     def __init__(
@@ -183,6 +186,7 @@ class MujocoTorqueMPC(
     def iter_plans(
         self, state: MujocoArmState, goal: MujocoGoal
     ) -> Iterable[Tuple[float, Tuple[MujocoTorqueControl, ...]]]:
+        """Yield all candidate plans and their costs."""
         for sequence in self._candidate_sequences():
             cost = self._evaluate_sequence(state, goal, sequence)
             yield cost, sequence
@@ -191,13 +195,10 @@ class MujocoTorqueMPC(
         self, state: MujocoArmState, control: MujocoTorqueControl
     ) -> MujocoArmState:
         clamped = self._clamp(control.torques)
-        return self.dynamics.step(
-            state, MujocoTorqueControl(clamped)
-        )
+        return self.dynamics.step(state, MujocoTorqueControl(clamped))
 
     def _candidate_sequences(self) -> Iterable[Tuple[MujocoTorqueControl, ...]]:
-        for sequence in self._deterministic_sequences:
-            yield sequence
+        yield from self._deterministic_sequences
 
         for _ in range(self._num_samples):
             torques = self._rng.normal(
@@ -228,13 +229,9 @@ class MujocoTorqueMPC(
                         raise ValueError(
                             "deterministic sequence must have shape (horizon, nu)"
                         )
-                    control_sequence = tuple(
-                        MujocoTorqueControl(row) for row in arr
-                    )
+                    control_sequence = tuple(MujocoTorqueControl(row) for row in arr)
                 else:
-                    raise ValueError(
-                        "deterministic sequence must be 1-D or 2-D array"
-                    )
+                    raise ValueError("deterministic sequence must be 1-D or 2-D array")
                 controls.append(control_sequence)
             return tuple(controls)
 

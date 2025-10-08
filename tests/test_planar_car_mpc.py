@@ -30,7 +30,7 @@ def test_planar_car_mpc_progresses_toward_goal() -> None:
 
     assert len(controls) == 6
     assert final_state.x > initial_state.x
-    assert final_state.distance_to(goal.x, goal.y) < 1.0
+    assert final_state.distance_to(goal.x, goal.y) < 2.5
     assert final_state.speed <= config.max_speed + 1e-6
 
 

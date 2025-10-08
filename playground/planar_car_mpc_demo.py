@@ -17,7 +17,6 @@ from safe_feedback_interpretation.planners import (
     PlanarCarState,
 )
 
-
 DEFAULT_OBSTACLE = CircularObstacle(center_x=2.0, center_y=0.75, radius=0.6, buffer=0.3)
 
 
@@ -401,7 +400,9 @@ def launch_gui(
             scale = max(min(scale_x, scale_y), 1e-6)
             return scale, min_x, min_y
 
-        def _state_to_canvas(self, x_value: float, y_value: float) -> Tuple[float, float]:
+        def _state_to_canvas(
+            self, x_value: float, y_value: float
+        ) -> Tuple[float, float]:
             cx = self._margin + (x_value - self._min_x) * self._scale
             cy = self._height - self._margin - (y_value - self._min_y) * self._scale
             return cx, cy
@@ -602,7 +603,9 @@ def launch_gui(
                     f"Sampled plans: {len(self._upcoming_plan.sampled_plans)} evaluated"
                 )
                 history = self._simulation.state_history
-                last_state = history[-1] if history else PlanarCarState(0.0, 0.0, 0.0, 0.0)
+                last_state = (
+                    history[-1] if history else PlanarCarState(0.0, 0.0, 0.0, 0.0)
+                )
                 for idx, (cost, controls, states) in enumerate(
                     self._upcoming_plan.sampled_plans[:5]
                 ):
@@ -612,8 +615,9 @@ def launch_gui(
                     yaw_rate = first_control.yaw_rate if first_control else 0.0
                     final_state = states[-1] if states else last_state
                     lines.append(
-                        f"  {marker}{idx+1:02d}: cost={cost:.3f} a0={accel:+.2f}, "
-                        f"w0={yaw_rate:+.2f}, xf={final_state.x:5.2f}, yf={final_state.y:5.2f}"
+                        f"  {marker}{idx+1:02d}: cost={cost:.3f} "
+                        f"a0={accel:+.2f}, w0={yaw_rate:+.2f}, "
+                        f"xf={final_state.x:5.2f}, yf={final_state.y:5.2f}"
                     )
                 if len(self._upcoming_plan.sampled_plans) > 5:
                     lines.append("  ...")

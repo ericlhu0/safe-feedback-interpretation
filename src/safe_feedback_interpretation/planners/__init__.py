@@ -1,6 +1,14 @@
 """Planner utilities for safe feedback interpretation."""
 
 from .base_planner import BasePlanner, ControlT, GoalT, StateT
+from .mujoco_torque_mpc import (
+    MujocoArmDynamics,
+    MujocoArmState,
+    MujocoGoal,
+    MujocoMPCWeights,
+    MujocoTorqueControl,
+    MujocoTorqueMPC,
+)
 from .planar_car_mpc import (
     CircularObstacle,
     MPCWeights,
@@ -10,14 +18,6 @@ from .planar_car_mpc import (
     PlanarCarGoal,
     PlanarCarMPC,
     PlanarCarState,
-)
-from .mujoco_torque_mpc import (
-    MujocoArmDynamics,
-    MujocoArmState,
-    MujocoGoal,
-    MujocoMPCWeights,
-    MujocoTorqueControl,
-    MujocoTorqueMPC,
 )
 
 __all__ = [

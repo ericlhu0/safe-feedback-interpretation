@@ -1,4 +1,5 @@
-"""Interactive MuJoCo demo that drives the Panda arm toward a moving goal using MPC."""
+"""Interactive MuJoCo demo that drives the Panda arm toward a moving goal using
+MPC."""
 
 from __future__ import annotations
 
@@ -19,9 +20,9 @@ from safe_feedback_interpretation.planners import (
 
 def add_obstacle(
     pos: list[float] | np.ndarray,
-    size: list[float] | np.ndarray = [0.05, 0.05, 0.05],
+    size: list[float] | np.ndarray | None = None,
     shape: str = "box",
-    rgba: list[float] | np.ndarray = [1, 0, 0, 0.8],
+    rgba: list[float] | np.ndarray | None = None,
     name: str | None = None,
 ) -> str:
     """Generate XML string for an obstacle.
@@ -38,6 +39,10 @@ def add_obstacle(
     """
     if name is None:
         name = f"obstacle_{np.random.randint(100000)}"
+    if size is None:
+        size = [0.05, 0.05, 0.05]
+    if rgba is None:
+        rgba = [1, 0, 0, 0.8]
 
     pos_str = " ".join(map(str, pos))
     size_str = " ".join(map(str, size))
@@ -50,7 +55,10 @@ def add_obstacle(
     """
 
 
-def _load_model(obstacles: list[dict] | None = None) -> tuple[mujoco.MjModel, mujoco.MjData]:
+def _load_model(
+    obstacles: list[dict] | None = None,
+) -> tuple[mujoco.MjModel, mujoco.MjData]:
+    """Load MuJoCo model with optional obstacles."""
     script_dir = os.path.dirname(os.path.abspath(__file__))
     model_path = os.path.join(
         script_dir, "mujoco_menagerie", "franka_emika_panda", "panda_nohand.xml"
@@ -105,7 +113,8 @@ def simulation_loop(obstacles: list[dict] | None = None) -> None:
     """Run the MPC simulation loop.
 
     Args:
-        obstacles: Optional list of obstacle specifications. Each obstacle is a dict with keys:
+        obstacles: Optional list of obstacle specifications.
+            Each obstacle is a dict with keys:
             - pos: [x, y, z] position (required)
             - size: [sx, sy, sz] size (optional, default [0.05, 0.05, 0.05])
             - shape: "box", "sphere", "cylinder", or "capsule" (optional, default "box")
@@ -154,7 +163,7 @@ def simulation_loop(obstacles: list[dict] | None = None) -> None:
             target_pos[2] += step_size
         elif keycode in (ord("e"), ord("E")):
             target_pos[2] -= step_size
-        
+
         print(f"New target position: {target_pos}")
 
     with mujoco.viewer.launch_passive(model, data, key_callback=key_callback) as viewer:
@@ -181,25 +190,32 @@ def simulation_loop(obstacles: list[dict] | None = None) -> None:
                     # Get body names
                     body1 = model.geom_bodyid[geom1]
                     body2 = model.geom_bodyid[geom2]
-                    body1_name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, body1)
-                    body2_name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, body2)
+                    body1_name = mujoco.mj_id2name(
+                        model, mujoco.mjtObj.mjOBJ_BODY, body1
+                    )
+                    body2_name = mujoco.mj_id2name(
+                        model, mujoco.mjtObj.mjOBJ_BODY, body2
+                    )
 
                     # Get contact force from efc_force (constraint forces)
-                    # data.efc_force contains forces for all constraints, contacts come first
+                    # data.efc_force contains forces for all constraints,
+                    # contacts come first
                     if i < len(data.efc_force):
                         force_mag = abs(data.efc_force[i])
                     else:
                         force_mag = 0.0
 
-                    print(f"Collision: {body1_name} <-> {body2_name}, force: {force_mag:.4f} N")
+                    print(
+                        f"Collision: {body1_name} <-> {body2_name}, "
+                        f"force: {force_mag:.4f} N"
+                    )
 
             viewer.sync()
             time.sleep(model.opt.timestep)
 
 
 if __name__ == "__main__":
-
-    obstacles = [
+    obstacles: list[dict] = [
         # {"pos": [0.4, 0.0, 0.6], "size": [0.2, 0.2, 0.2]},
         # {"pos": [0.3, 0.2, 0.7], "shape": "sphere", "size": [0.05]},
     ]

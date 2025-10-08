@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""
-Generate a posed SMPL mesh and export it to OBJ (manual implementation, no smplx).
+"""Generate a posed SMPL mesh and export it to OBJ (manual implementation, no
+smplx).
 
 Usage:
   python smpl_to_obj.py --models_dir /path/to/SMPL_python_v.1.1.0 \
@@ -13,23 +13,36 @@ Usage:
 
 import argparse
 import os
+
 import numpy as np
 
+
 def parse_args():
+    """Parse command line arguments."""
     p = argparse.ArgumentParser()
-    p.add_argument("--models_dir", required=True,
-                   help="Root dir containing 'smpl/SMPL_*.npz'")
+    p.add_argument(
+        "--models_dir", required=True, help="Root dir containing 'smpl/SMPL_*.npz'"
+    )
     p.add_argument("--gender", default="neutral", choices=["male", "female", "neutral"])
-    p.add_argument("--betas", default="0,0,0,0,0,0,0,0,0,0",
-                   help="Comma-separated 10D shape vector")
-    p.add_argument("--global_orient", default="0,0,0",
-                   help="Axis-angle (radians) for root orientation, comma-separated 3D")
-    p.add_argument("--body_pose", default=None,
-                   help="(Optional) 69D axis-angle (23 joints x 3), comma-separated")
-    p.add_argument("--scale", type=float, default=1.0,
-                   help="Uniform scale multiplier")
+    p.add_argument(
+        "--betas",
+        default="0,0,0,0,0,0,0,0,0,0",
+        help="Comma-separated 10D shape vector",
+    )
+    p.add_argument(
+        "--global_orient",
+        default="0,0,0",
+        help="Axis-angle (radians) for root orientation, comma-separated 3D",
+    )
+    p.add_argument(
+        "--body_pose",
+        default=None,
+        help="(Optional) 69D axis-angle (23 joints x 3), comma-separated",
+    )
+    p.add_argument("--scale", type=float, default=1.0, help="Uniform scale multiplier")
     p.add_argument("--out", default="smpl_body.obj", help="Output OBJ path")
     return p.parse_args()
+
 
 def mild_apose_69d():
     """Arms at sides pose."""
@@ -38,18 +51,20 @@ def mild_apose_69d():
     pose[16, 2] = 1.4  # right shoulder
     return pose.reshape(-1)
 
+
 def rodrigues(r):
     """Convert axis-angle to rotation matrix."""
     theta = np.linalg.norm(r)
     if theta < 1e-6:
         return np.eye(3)
     r = r / theta
-    K = np.array([[0, -r[2], r[1]],
-                  [r[2], 0, -r[0]],
-                  [-r[1], r[0], 0]])
+    K = np.array([[0, -r[2], r[1]], [r[2], 0, -r[0]], [-r[1], r[0], 0]])
     return np.eye(3) + np.sin(theta) * K + (1 - np.cos(theta)) * (K @ K)
 
-def lbs(betas, pose, v_template, shapedirs, posedirs, J_regressor, weights, kintree_table):
+
+def lbs(
+    betas, pose, v_template, shapedirs, posedirs, J_regressor, weights, kintree_table
+):
     """Linear blend skinning."""
     batch_size = betas.shape[0]
 
@@ -106,20 +121,24 @@ def lbs(betas, pose, v_template, shapedirs, posedirs, J_regressor, weights, kint
     v_homo = np.zeros_like(v_posed_homo)
 
     for i in range(num_joints):
-        v_homo += (weights[:, i:i+1] * np.dot(T[i], v_posed_homo.T).T)
+        v_homo += weights[:, i : i + 1] * np.dot(T[i], v_posed_homo.T).T
 
     vertices = v_homo[:, :3]
 
     return vertices
 
+
 def write_obj(path, verts, faces):
-    with open(path, "w") as f:
+    """Write OBJ file."""
+    with open(path, "w", encoding="utf-8") as f:
         for v in verts:
             f.write(f"v {v[0]} {v[1]} {v[2]}\n")
         for tri in faces:
             f.write(f"f {tri[0]+1} {tri[1]+1} {tri[2]+1}\n")
 
+
 def main():
+    """Main function."""
     a = parse_args()
     gender = a.gender.lower()
 
@@ -128,20 +147,22 @@ def main():
     if not os.path.exists(npz_path):
         raise FileNotFoundError(f"Model file not found: {npz_path}")
 
-    data = np.load(npz_path, allow_pickle=True, encoding='latin1')
+    data = np.load(npz_path, allow_pickle=True, encoding="latin1")
 
-    v_template = data['v_template']
-    shapedirs = data['shapedirs']
-    J_regressor = data['J_regressor']
-    if hasattr(J_regressor, 'toarray'):
+    v_template = data["v_template"]
+    shapedirs = data["shapedirs"]
+    J_regressor = data["J_regressor"]
+    if hasattr(J_regressor, "toarray"):
         J_regressor = J_regressor.toarray()
-    posedirs = data['posedirs']
-    weights = data['weights']
-    faces = data['f']
-    kintree_table = data['kintree_table']
+    posedirs = data["posedirs"]
+    weights = data["weights"]
+    faces = data["f"]
+    kintree_table = data["kintree_table"]
 
     # Parse parameters
-    betas = np.array([float(x) for x in a.betas.split(",")], dtype=np.float32).reshape(1, -1)
+    betas = np.array([float(x) for x in a.betas.split(",")], dtype=np.float32).reshape(
+        1, -1
+    )
     root = np.array([float(x) for x in a.global_orient.split(",")], dtype=np.float32)
 
     if a.body_pose is None:
@@ -155,7 +176,16 @@ def main():
     pose = np.concatenate([root, body_pose])
 
     # Run LBS
-    verts = lbs(betas, pose, v_template, shapedirs, posedirs, J_regressor, weights, kintree_table)
+    verts = lbs(
+        betas,
+        pose,
+        v_template,
+        shapedirs,
+        posedirs,
+        J_regressor,
+        weights,
+        kintree_table,
+    )
 
     # Apply scale
     if a.scale != 1.0:
@@ -166,6 +196,7 @@ def main():
 
     write_obj(a.out, verts, faces)
     print(f"Wrote {a.out} with {len(verts)} vertices, {len(faces)} faces.")
+
 
 if __name__ == "__main__":
     main()

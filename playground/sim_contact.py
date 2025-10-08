@@ -1,19 +1,26 @@
-import pybullet as p
-import pybullet_data
-import numpy as np
+"""Simulation loop for contact testing with PyBullet."""
+
 import time
 
+import numpy as np
+import pybullet as p
+import pybullet_data
+
+
 def simulation_loop():
+    """Run the simulation loop."""
     # Connect to PyBullet in GUI mode
-    physicsClient = p.connect(p.GUI)
+    _ = p.connect(p.GUI)
     p.setAdditionalSearchPath(pybullet_data.getDataPath())
     p.setGravity(0, 0, -9.81)
 
     # Load plane and Franka Panda robot
-    planeId = p.loadURDF("plane.urdf")
+    _ = p.loadURDF("plane.urdf")
 
     # Load big collision block on the ground
-    blockId = p.loadURDF("cube_small.urdf", [0.5, 0.0, 0.5], globalScaling=10, useFixedBase=True)
+    _ = p.loadURDF(
+        "cube_small.urdf", [0.5, 0.0, 0.5], globalScaling=10, useFixedBase=True
+    )
 
     pandaId = p.loadURDF("franka_panda/panda.urdf", [0, 0, 0], useFixedBase=True)
 
@@ -50,19 +57,19 @@ def simulation_loop():
         # Handle keyboard input from PyBullet
         keys = p.getKeyboardEvents()
 
-        if ord('w') in keys and keys[ord('w')] & p.KEY_IS_DOWN:
+        if ord("w") in keys and keys[ord("w")] & p.KEY_IS_DOWN:
             targetPos[0] += step_size
-        if ord('s') in keys and keys[ord('s')] & p.KEY_IS_DOWN:
+        if ord("s") in keys and keys[ord("s")] & p.KEY_IS_DOWN:
             targetPos[0] -= step_size
-        if ord('a') in keys and keys[ord('a')] & p.KEY_IS_DOWN:
+        if ord("a") in keys and keys[ord("a")] & p.KEY_IS_DOWN:
             targetPos[1] += step_size
-        if ord('d') in keys and keys[ord('d')] & p.KEY_IS_DOWN:
+        if ord("d") in keys and keys[ord("d")] & p.KEY_IS_DOWN:
             targetPos[1] -= step_size
-        if ord('q') in keys and keys[ord('q')] & p.KEY_IS_DOWN:
+        if ord("q") in keys and keys[ord("q")] & p.KEY_IS_DOWN:
             targetPos[2] += step_size
-        if ord('e') in keys and keys[ord('e')] & p.KEY_IS_DOWN:
+        if ord("e") in keys and keys[ord("e")] & p.KEY_IS_DOWN:
             targetPos[2] -= step_size
-        if ord('x') in keys and keys[ord('x')] & p.KEY_WAS_TRIGGERED:
+        if ord("x") in keys and keys[ord("x")] & p.KEY_WAS_TRIGGERED:
             running = False
             break
 
@@ -76,17 +83,13 @@ def simulation_loop():
             targetPos,
             targetOrn,
             maxNumIterations=100,
-            residualThreshold=1e-5
+            residualThreshold=1e-5,
         )
 
         # Apply motor control
         for i, j in enumerate(controllableJoints[:7]):
             p.setJointMotorControl2(
-                pandaId,
-                j,
-                p.POSITION_CONTROL,
-                targetPosition=jointPoses[i],
-                force=100
+                pandaId, j, p.POSITION_CONTROL, targetPosition=jointPoses[i], force=100
             )
 
         p.stepSimulation()
@@ -99,20 +102,23 @@ def simulation_loop():
                 bodyB = contact[2]
                 linkA = contact[3]
                 linkB = contact[4]
-                contact_normal = contact[7]
                 contact_distance = contact[8]
                 contact_force = contact[9]
 
                 # Get link name for better readability
                 if linkA >= 0:
-                    linkA_name = p.getJointInfo(bodyA, linkA)[12].decode('utf-8')
+                    linkA_name = p.getJointInfo(bodyA, linkA)[12].decode("utf-8")
                 else:
                     linkA_name = "base"
 
-                print(f"Collision: Robot link '{linkA_name}' with body {bodyB} (link {linkB}), "
-                      f"distance: {contact_distance:.4f}, force: {contact_force:.4f}")
+                print(
+                    f"Collision: Robot link '{linkA_name}' with body "
+                    f"{bodyB} (link {linkB}), "
+                    f"distance: {contact_distance:.4f}, "
+                    f"force: {contact_force:.4f}"
+                )
 
-        time.sleep(1.0/240.0)
+        time.sleep(1.0 / 240.0)
 
     p.disconnect()
 
