@@ -13,11 +13,12 @@ Usage:
 
 import argparse
 import os
+from typing import Any
 
 import numpy as np
 
 
-def parse_args():
+def parse_args() -> Any:
     """Parse command line arguments."""
     p = argparse.ArgumentParser()
     p.add_argument(
@@ -44,7 +45,7 @@ def parse_args():
     return p.parse_args()
 
 
-def mild_apose_69d():
+def mild_apose_69d() -> np.ndarray:
     """Arms at sides pose."""
     pose = np.zeros((23, 3), dtype=np.float32)
     pose[15, 2] = -1.4  # left shoulder (? could also be "collar")
@@ -52,7 +53,7 @@ def mild_apose_69d():
     return pose.reshape(-1)
 
 
-def rodrigues(r):
+def rodrigues(r: Any) -> np.ndarray:
     """Convert axis-angle to rotation matrix."""
     theta = np.linalg.norm(r)
     if theta < 1e-6:
@@ -63,8 +64,15 @@ def rodrigues(r):
 
 
 def lbs(
-    betas, pose, v_template, shapedirs, posedirs, J_regressor, weights, kintree_table
-):
+    betas: Any,
+    pose: Any,
+    v_template: Any,
+    shapedirs: Any,
+    posedirs: Any,
+    J_regressor: Any,
+    weights: Any,
+    kintree_table: Any,
+) -> np.ndarray:
     """Linear blend skinning."""
     batch_size = betas.shape[0]
 
@@ -128,7 +136,7 @@ def lbs(
     return vertices
 
 
-def write_obj(path, verts, faces):
+def write_obj(path: str, verts: Any, faces: Any) -> None:
     """Write OBJ file."""
     with open(path, "w", encoding="utf-8") as f:
         for v in verts:
@@ -137,7 +145,7 @@ def write_obj(path, verts, faces):
             f.write(f"f {tri[0]+1} {tri[1]+1} {tri[2]+1}\n")
 
 
-def main():
+def main() -> None:
     """Main function."""
     a = parse_args()
     gender = a.gender.lower()

@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import pytest
 
-mujoco = pytest.importorskip("mujoco")
+mujoco = pytest.importorskip("mujoco")  # type: ignore[misc]
 
 from safe_feedback_interpretation.planners import (
     MujocoArmDynamics,
@@ -40,13 +42,11 @@ _SLIDER_XML = """
 """
 
 
-def _site_id(model: mujoco.MjModel, name: str) -> int:
+def _site_id(model: Any, name: str) -> int:
     return mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, name)
 
 
-def _site_position(
-    model: mujoco.MjModel, state: MujocoArmState, site_id: int
-) -> np.ndarray:
+def _site_position(model: Any, state: MujocoArmState, site_id: int) -> np.ndarray:
     data = mujoco.MjData(model)
     data.qpos[: model.nq] = state.qpos
     data.qvel[: model.nv] = state.qvel

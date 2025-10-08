@@ -6,8 +6,8 @@ from __future__ import annotations
 import os
 import time
 
-import mujoco
-import mujoco.viewer
+import mujoco  # type: ignore[import-untyped]
+import mujoco.viewer  # type: ignore[import-untyped]
 import numpy as np
 
 from safe_feedback_interpretation.planners import (

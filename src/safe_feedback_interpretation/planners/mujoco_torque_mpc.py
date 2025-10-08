@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Sequence, Tuple
 
-import mujoco
+import mujoco  # type: ignore[import-untyped]
 import numpy as np
 from numpy.typing import NDArray
 

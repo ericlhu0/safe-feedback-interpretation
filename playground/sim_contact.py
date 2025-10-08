@@ -3,11 +3,11 @@
 import time
 
 import numpy as np
-import pybullet as p
-import pybullet_data
+import pybullet as p  # type: ignore[import-not-found]
+import pybullet_data  # type: ignore[import-untyped]
 
 
-def simulation_loop():
+def simulation_loop() -> None:
     """Run the simulation loop."""
     # Connect to PyBullet in GUI mode
     _ = p.connect(p.GUI)

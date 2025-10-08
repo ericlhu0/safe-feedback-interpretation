@@ -3,12 +3,12 @@
 import os
 import time
 
-import mujoco
-import mujoco.viewer
+import mujoco  # type: ignore[import-untyped]
+import mujoco.viewer  # type: ignore[import-untyped]
 import numpy as np
 
 
-def simulation_loop():
+def simulation_loop() -> None:
     """Run the simulation loop."""
     # Load official Panda model
     script_dir = os.path.dirname(os.path.abspath(__file__))
