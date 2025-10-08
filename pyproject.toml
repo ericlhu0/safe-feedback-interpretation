@@ -20,6 +20,9 @@ dependencies = [
    "seaborn",
    "scipy",
    "scikit-learn",
+   "mujoco",
+   "pybullet",
+   "keyboard"
 ]
 
 [project.optional-dependencies]
