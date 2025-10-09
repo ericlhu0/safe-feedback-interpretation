@@ -1,17 +1,22 @@
 """Avatar representing a care recipient."""
 
 from abc import ABC, abstractmethod
-from typing import TypeVar, Optional, Generic
+from typing import Generic, Optional, TypeVar
 
 StateT = TypeVar("StateT")
 FeedbackT = TypeVar("FeedbackT")
 ComfortRepresentationT = TypeVar("ComfortRepresentationT")
 ComfortThresholdsT = TypeVar("ComfortThresholdsT")
 
-class BaseAvatar(ABC, Generic[StateT, FeedbackT, ComfortRepresentationT, ComfortThresholdsT]):
+
+class BaseAvatar(
+    ABC, Generic[StateT, FeedbackT, ComfortRepresentationT, ComfortThresholdsT]
+):
     """Base class for a care recipient avatar."""
 
-    def __init__(self, gt_state: StateT, comfort_thresholds: ComfortThresholdsT) -> None:
+    def __init__(
+        self, gt_state: StateT, comfort_thresholds: ComfortThresholdsT
+    ) -> None:
         """Initialize the avatar."""
         self._gt_state = gt_state
         self._comfort_thresholds = comfort_thresholds
@@ -25,7 +30,5 @@ class BaseAvatar(ABC, Generic[StateT, FeedbackT, ComfortRepresentationT, Comfort
         """Convert the ground truth state to feedback."""
 
     @abstractmethod
-    def step() -> Optional[FeedbackT]:
+    def step(self) -> Optional[FeedbackT]:
         """Advance the avatar's state by one time step."""
-    
-        

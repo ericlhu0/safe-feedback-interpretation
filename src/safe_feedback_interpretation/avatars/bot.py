@@ -1,15 +1,21 @@
-from safe_feedback_interpretation.avatars.base_avatar import BaseAvatar
-from typing import Optional, TypeAlias, Sequence, List
-from pybullet_helpers.joint import JointPositions
-from dataclasses import dataclass
+"""An avatar that perfectly communicates its joint state as verbal feedback."""
+
 import random
+from dataclasses import dataclass
 from enum import IntEnum
+from typing import List, Optional, Sequence, TypeAlias
+
+from pybullet_helpers.joint import JointPositions
+
+from safe_feedback_interpretation.avatars.base_avatar import BaseAvatar
 
 VerbalFeedback: TypeAlias = str
 ArmJointState: TypeAlias = JointPositions
 
 
 class ComfortLevel(IntEnum):
+    """Comfort levels."""
+
     UNCOMFORTABLE = 0
     MEDIUM = 1
     COMFORTABLE = 2
@@ -17,28 +23,34 @@ class ComfortLevel(IntEnum):
 
 @dataclass(frozen=True)
 class ComfortThreshold:
-    # Ranges are inclusive: (low, high)
+    """Comfort thresholds for a single joint."""
+
     comfortable: Sequence[tuple[float, float]]
     medium: Sequence[tuple[float, float]]
 
+
 ComfortThresholds: TypeAlias = List[ComfortThreshold]
 
-class PerfectCommunicator(BaseAvatar[ArmJointState, VerbalFeedback, ComfortLevel, ComfortThresholds]):
-    """An avatar that perfectly communicates its joint state as verbal feedback."""
+
+class PerfectCommunicator(
+    BaseAvatar[ArmJointState, VerbalFeedback, ComfortLevel, ComfortThresholds]
+):
+    """An avatar that perfectly communicates its joint state as verbal
+    feedback."""
+
     def __init__(self, gt_state: ArmJointState) -> None:
-        super().__init__(gt_state, [
-            ComfortThreshold(
-                comfortable=[(30, 150)],
-                medium=[(10, 30), (150, 170)]
-            ) for _ in range(len(gt_state))
-        ])
+        super().__init__(
+            gt_state,
+            [ComfortThreshold(comfortable=[(30, 150)], medium=[(10, 30), (150, 170)])]
+            * len(gt_state),
+        )
         assert len(gt_state) == len(self._comfort_thresholds)
 
-    def _state_to_comfort(
-        self, state: ArmJointState
-    ) -> ComfortLevel:
-        """Convert a joint state to a comfort level based on per-joint thresholds."""
-        def _classify(angle: float, t: ComfortThresholds) -> ComfortLevel:
+    def _state_to_comfort(self, state: ArmJointState) -> ComfortLevel:
+        """Convert a joint state to a comfort level based on per-joint
+        thresholds."""
+
+        def _classify(angle: float, t: ComfortThreshold) -> ComfortLevel:
             if any(lo <= angle <= hi for lo, hi in t.comfortable):
                 return ComfortLevel.COMFORTABLE
             if any(lo <= angle <= hi for lo, hi in t.medium):
@@ -63,7 +75,6 @@ class PerfectCommunicator(BaseAvatar[ArmJointState, VerbalFeedback, ComfortLevel
                 "uncomfortable",
             ],
         }
-
         return random.choice(expressions[comfort_state])
 
     def step(self) -> Optional[VerbalFeedback]:
