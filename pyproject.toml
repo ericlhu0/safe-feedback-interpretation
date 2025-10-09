@@ -22,7 +22,8 @@ dependencies = [
    "scikit-learn",
    "mujoco",
    "pybullet",
-   "keyboard"
+   "keyboard",
+   "pybullet_helpers@git+https://github.com/ericlhu0/pybullet-helpers.git"
 ]
 
 [project.optional-dependencies]
