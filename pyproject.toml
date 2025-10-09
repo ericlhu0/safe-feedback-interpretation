@@ -64,5 +64,6 @@ exclude = ["venv/*"]
 module = [
     "matplotlib.*",
     "seaborn.*",
+    "pybullet.*",
 ]
 ignore_missing_imports = true

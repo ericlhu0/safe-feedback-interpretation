@@ -12,7 +12,7 @@ Usage:
 """
 
 import argparse
-import os
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -151,8 +151,8 @@ def main() -> None:
     gender = a.gender.lower()
 
     # Load SMPL model
-    npz_path = os.path.join(a.models_dir, "smpl", f"SMPL_{gender.upper()}.npz")
-    if not os.path.exists(npz_path):
+    npz_path = Path(a.models_dir) / "smpl" / f"SMPL_{gender.upper()}.npz"
+    if not npz_path.exists():
         raise FileNotFoundError(f"Model file not found: {npz_path}")
 
     data = np.load(npz_path, allow_pickle=True, encoding="latin1")
