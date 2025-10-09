@@ -2,6 +2,7 @@
 
 import os
 import time
+from pathlib import Path
 
 import mujoco  # type: ignore[import-untyped]
 import mujoco.viewer  # type: ignore[import-untyped]
@@ -11,10 +12,15 @@ import numpy as np
 def simulation_loop() -> None:
     """Run the simulation loop."""
     # Load official Panda model
-    script_dir = os.path.dirname(os.path.abspath(__file__))
+    script_dir = Path(__file__).parent
     # Use the "no hand" variant because it keeps default collision masks enabled
-    model_path = os.path.join(
-        script_dir, "mujoco_menagerie/franka_emika_panda/panda_nohand.xml"
+    model_path = (
+        script_dir
+        / ".."
+        / "assets"
+        / "mujoco_menagerie"
+        / "franka_emika_panda"
+        / "panda_nohand.xml"
     )
 
     # Load base model
@@ -35,7 +41,7 @@ def simulation_loop() -> None:
     xml_content = xml_content.replace("</worldbody>", custom_bodies + "  </worldbody>")
 
     # Change to model directory for relative paths
-    model_dir = os.path.dirname(model_path)
+    model_dir = model_path.parent
     old_cwd = os.getcwd()
     os.chdir(model_dir)
 

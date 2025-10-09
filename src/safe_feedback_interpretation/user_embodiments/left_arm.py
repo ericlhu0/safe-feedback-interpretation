@@ -47,15 +47,9 @@ class LeftArm(UserEmbodiment[JointPositions], SingleArmPyBulletRobot):
 
     @property
     def default_urdf_path(self) -> Path:
-        print(
-            Path(__file__).parent.parent.parent.parent
-            / "playground"
-            / "human"
-            / "left_arm_6dof_continuous.urdf"
-        )
         return (
             Path(__file__).parent.parent.parent.parent
-            / "playground"
+            / "assets"
             / "human"
             / "left_arm_6dof_continuous.urdf"
         )

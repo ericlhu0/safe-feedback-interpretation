@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import os
 import time
+from pathlib import Path
 
 import mujoco  # type: ignore[import-untyped]
 import mujoco.viewer  # type: ignore[import-untyped]
@@ -59,16 +60,21 @@ def _load_model(
     obstacles: list[dict] | None = None,
 ) -> tuple[mujoco.MjModel, mujoco.MjData]:
     """Load MuJoCo model with optional obstacles."""
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    model_path = os.path.join(
-        script_dir, "mujoco_menagerie", "franka_emika_panda", "panda_nohand.xml"
+    script_dir = Path(__file__).parent
+    model_path = (
+        script_dir
+        / ".."
+        / "assets"
+        / "mujoco_menagerie"
+        / "franka_emika_panda"
+        / "panda_nohand.xml"
     )
 
     with open(model_path, "r", encoding="utf-8") as handle:
         xml_content = handle.read()
 
     # Add SMPL mesh asset
-    smpl_mesh_path = os.path.join(script_dir, "smpl", "smpl.obj")
+    smpl_mesh_path = script_dir / ".." / "assets" / "smpl" / "smpl.obj"
     smpl_asset = f'<mesh name="smpl_human" file="{smpl_mesh_path}"/>'
     xml_content = xml_content.replace("</asset>", smpl_asset + "\n  </asset>")
 
@@ -97,7 +103,7 @@ def _load_model(
 
     xml_content = xml_content.replace("</worldbody>", extra_bodies + "  </worldbody>")
 
-    model_dir = os.path.dirname(model_path)
+    model_dir = model_path.parent
     old_cwd = os.getcwd()
     os.chdir(model_dir)
     try:
